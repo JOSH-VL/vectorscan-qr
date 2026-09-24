@@ -1,0 +1,29 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: vectorscan_db
+    restart: always
+    environment:
+      POSTGRES_DB: vectorscan_db
+      POSTGRES_USER: vectorscan_user
+      POSTGRES_PASSWORD: vectorscan_pass_2026
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+  web:
+    build: .
+    container_name: vectorscan_web
+    restart: always
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+    depends_on:
+      - db
+volumes:
+  postgres_data:
