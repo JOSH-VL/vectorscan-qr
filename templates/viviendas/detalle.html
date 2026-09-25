@@ -1,0 +1,116 @@
+{% extends 'base/layout.html' %}
+{% block title %}{{ vivienda.codigo_qr }} — VectorScan QR{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-house-check"></i> Detalle de Vivienda</h4>
+    <div class="d-flex gap-2">
+        <a href="{% url 'viviendas:editar' vivienda.pk %}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> Editar</a>
+        <a href="{% url 'viviendas:lista' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Datos de la vivienda -->
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><span class="badge bg-dark font-monospace fs-6">{{ vivienda.codigo_qr }}</span></h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <strong class="text-muted d-block">Dirección</strong>
+                        {{ vivienda.direccion }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <strong class="text-muted d-block">Zona</strong>
+                        {{ vivienda.zona|default:"No especificada" }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <strong class="text-muted d-block">Estado</strong>
+                        <span class="badge {% if vivienda.estado == 'Activo' %}bg-success{% else %}bg-danger{% endif %}">{{ vivienda.estado }}</span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong class="text-muted d-block">Responsable de familia</strong>
+                        {{ vivienda.responsable_familia }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <strong class="text-muted d-block">Habitantes</strong>
+                        {{ vivienda.num_habitantes }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <strong class="text-muted d-block">Teléfono</strong>
+                        {{ vivienda.telefono|default:"No registrado" }}
+                    </div>
+                    <div class="col-12 mb-3">
+                        <strong class="text-muted d-block">Referencia</strong>
+                        {{ vivienda.referencia|default:"Sin referencia" }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong class="text-muted d-block">Fecha de registro</strong>
+                        {{ vivienda.fecha_registro|date:"d/m/Y H:i" }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong class="text-muted d-block">Registrado por</strong>
+                        {{ vivienda.registrado_por.nombre_completo|default:vivienda.registrado_por.username }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historial de cambios -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-clock-history"></i> Historial de Cambios</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Operación</th>
+                            <th>Realizado por</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in historial %}
+                        <tr>
+                            <td>{{ h.fecha_cambio|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <span class="badge {% if h.tipo_operacion == 'INSERT' %}bg-success{% elif h.tipo_operacion == 'UPDATE' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                    {{ h.get_tipo_operacion_display }}
+                                </span>
+                            </td>
+                            <td>{{ h.usuario_cambio.nombre_completo|default:h.usuario_cambio.username }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center text-muted py-3">Sin historial</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Código QR -->
+    <div class="col-md-4">
+        <div class="card shadow-sm text-center">
+            <div class="card-header bg-dark text-white">
+                <h6 class="mb-0"><i class="bi bi-qr-code"></i> Código QR</h6>
+            </div>
+            <div class="card-body">
+                {% if vivienda.imagen_qr %}
+                <img src="{{ vivienda.imagen_qr.url }}" alt="QR {{ vivienda.codigo_qr }}" class="img-fluid mb-3" style="max-width: 250px;">
+                {% else %}
+                <p class="text-muted">QR no disponible</p>
+                {% endif %}
+                <p class="font-monospace fw-bold">{{ vivienda.codigo_qr }}</p>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'viviendas:descargar_qr' vivienda.pk %}" class="btn btn-dark"><i class="bi bi-download"></i> Descargar QR</a>
+                    <a href="{% url 'viviendas:imprimir_qr' vivienda.pk %}" class="btn btn-outline-dark" target="_blank"><i class="bi bi-printer"></i> Imprimir QR</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

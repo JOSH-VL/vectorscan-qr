@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>QR — {{ vivienda.codigo_qr }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .qr-card {
+            border: 3px solid #000;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            width: 350px;
+        }
+        .qr-card h2 { font-size: 18px; margin-bottom: 5px; }
+        .qr-card .subtitle { font-size: 11px; color: #666; margin-bottom: 20px; }
+        .qr-card img { width: 220px; height: 220px; margin-bottom: 15px; }
+        .qr-card .code { font-family: monospace; font-size: 20px; font-weight: bold; margin-bottom: 10px; }
+        .qr-card .address { font-size: 13px; color: #333; margin-bottom: 5px; }
+        .qr-card .responsible { font-size: 12px; color: #666; }
+        .qr-card .footer { font-size: 10px; color: #999; margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px; }
+        @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <div class="qr-card">
+            <h2>VectorScan QR</h2>
+            <div class="subtitle">Programa de ETV — Centro de Salud, San Felipe</div>
+            {% if vivienda.imagen_qr %}
+            <img src="{{ vivienda.imagen_qr.url }}" alt="QR">
+            {% endif %}
+            <div class="code">{{ vivienda.codigo_qr }}</div>
+            <div class="address">{{ vivienda.direccion }}</div>
+            <div class="responsible">Responsable: {{ vivienda.responsable_familia }}</div>
+            <div class="footer">NO REMOVER — Programa de Vigilancia Epidemiológica</div>
+        </div>
+        <div class="text-center mt-3 no-print">
+            <button onclick="window.print()" style="padding: 10px 30px; font-size: 16px; cursor: pointer; background: #1e3a5f; color: white; border: none; border-radius: 6px;">
+                🖨️ Imprimir
+            </button>
+        </div>
+    </div>
+</body>
+</html>

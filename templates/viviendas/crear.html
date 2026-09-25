@@ -1,0 +1,46 @@
+{% extends 'base/layout.html' %}
+{% block title %}Nueva Vivienda — VectorScan QR{% endblock %}
+{% block content %}
+<h4 class="mb-4"><i class="bi bi-house-add"></i> Registrar Nueva Vivienda</h4>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label class="form-label fw-semibold">Dirección <span class="text-danger">*</span></label>
+                    <input type="text" name="direccion" class="form-control" placeholder="Ej: 5a Avenida 3-45, Zona 1" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-semibold">Zona</label>
+                    <input type="text" name="zona" class="form-control" placeholder="Ej: Zona 1">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold">Responsable de familia <span class="text-danger">*</span></label>
+                    <input type="text" name="responsable_familia" class="form-control" placeholder="Nombre del jefe de familia" required>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-semibold">Número de habitantes</label>
+                    <input type="number" name="num_habitantes" class="form-control" min="0" value="0">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-semibold">Teléfono de contacto</label>
+                    <input type="text" name="telefono" class="form-control" placeholder="Ej: 5555-1234">
+                </div>
+                <div class="col-12 mb-3">
+                    <label class="form-label fw-semibold">Referencia de ubicación</label>
+                    <input type="text" name="referencia" class="form-control" placeholder="Ej: Frente a la tienda Don Pedro, casa color azul">
+                </div>
+            </div>
+            <hr>
+            <div class="d-flex gap-2">
+                <a href="{% url 'viviendas:lista' %}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Cancelar</a>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Registrar y Generar QR</button>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="alert alert-info mt-3">
+    <i class="bi bi-info-circle"></i> Al guardar, el sistema generará automáticamente un código QR único para esta vivienda.
+</div>
+{% endblock %}

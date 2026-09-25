@@ -1,0 +1,75 @@
+{% extends 'base/layout.html' %}
+{% block title %}Viviendas — VectorScan QR{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-houses"></i> Registro de Viviendas y QR</h4>
+    <a href="{% url 'viviendas:crear' %}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Nueva Vivienda</a>
+</div>
+
+<!-- Barra de búsqueda y filtros -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" class="form-control" placeholder="Buscar por código QR, dirección o responsable..." value="{{ busqueda }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="zona" class="form-select">
+                    <option value="">Todas las zonas</option>
+                    {% for z in zonas %}
+                    <option value="{{ z }}" {% if zona_filtro == z %}selected{% endif %}>{{ z }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-funnel"></i> Filtrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Contador -->
+<p class="text-muted mb-3"><i class="bi bi-house-check"></i> <strong>{{ total }}</strong> viviendas registradas</p>
+
+<!-- Tabla de viviendas -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Código QR</th>
+                    <th>Dirección</th>
+                    <th>Responsable</th>
+                    <th>Zona</th>
+                    <th>Habitantes</th>
+                    <th>Registro</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in viviendas %}
+                <tr>
+                    <td><span class="badge bg-dark font-monospace">{{ v.codigo_qr }}</span></td>
+                    <td>{{ v.direccion }}</td>
+                    <td>{{ v.responsable_familia }}</td>
+                    <td>{{ v.zona|default:"-" }}</td>
+                    <td class="text-center">{{ v.num_habitantes }}</td>
+                    <td>{{ v.fecha_registro|date:"d/m/Y" }}</td>
+                    <td>
+                        <a href="{% url 'viviendas:detalle' v.pk %}" class="btn btn-sm btn-outline-info" title="Ver detalle"><i class="bi bi-eye"></i></a>
+                        <a href="{% url 'viviendas:descargar_qr' v.pk %}" class="btn btn-sm btn-outline-dark" title="Descargar QR"><i class="bi bi-qr-code"></i></a>
+                        <a href="{% url 'viviendas:editar' v.pk %}" class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></a>
+                        <a href="{% url 'viviendas:desactivar' v.pk %}" class="btn btn-sm btn-outline-danger" title="Desactivar"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No hay viviendas registradas. <a href="{% url 'viviendas:crear' %}">Registrar la primera</a></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

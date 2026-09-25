@@ -1,0 +1,45 @@
+{% extends 'base/layout.html' %}
+{% block title %}Editar Vivienda — VectorScan QR{% endblock %}
+{% block content %}
+<h4 class="mb-4"><i class="bi bi-pencil-square"></i> Editar Vivienda: {{ vivienda.codigo_qr }}</h4>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-semibold">Código QR</label>
+                    <input type="text" class="form-control" value="{{ vivienda.codigo_qr }}" disabled>
+                </div>
+                <div class="col-md-8 mb-3">
+                    <label class="form-label fw-semibold">Dirección <span class="text-danger">*</span></label>
+                    <input type="text" name="direccion" class="form-control" value="{{ vivienda.direccion }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold">Responsable de familia <span class="text-danger">*</span></label>
+                    <input type="text" name="responsable_familia" class="form-control" value="{{ vivienda.responsable_familia }}" required>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-semibold">Zona</label>
+                    <input type="text" name="zona" class="form-control" value="{{ vivienda.zona }}">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-semibold">Habitantes</label>
+                    <input type="number" name="num_habitantes" class="form-control" min="0" value="{{ vivienda.num_habitantes }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold">Teléfono</label>
+                    <input type="text" name="telefono" class="form-control" value="{{ vivienda.telefono }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold">Referencia</label>
+                    <input type="text" name="referencia" class="form-control" value="{{ vivienda.referencia }}">
+                </div>
+            </div>
+            <hr>
+            <a href="{% url 'viviendas:detalle' vivienda.pk %}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Actualizar</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
