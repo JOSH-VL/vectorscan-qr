@@ -1,0 +1,85 @@
+{% extends 'base/layout.html' %}
+{% block title %}Inspección {{ inspeccion.vivienda.codigo_qr }} — VectorScan QR{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-clipboard-check"></i> Detalle de Inspección</h4>
+    <a href="{% url 'inspecciones:lista' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <strong class="text-muted d-block">Vivienda</strong>
+                        <span class="badge bg-dark font-monospace">{{ inspeccion.vivienda.codigo_qr }}</span>
+                        {{ inspeccion.vivienda.direccion }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <strong class="text-muted d-block">Fecha</strong>
+                        {{ inspeccion.fecha_inspeccion|date:"d/m/Y H:i" }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <strong class="text-muted d-block">Técnico</strong>
+                        {{ inspeccion.usuario.nombre_completo|default:inspeccion.usuario.username }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <strong class="text-muted d-block">¿Larvas?</strong>
+                        {% if inspeccion.presencia_larvas %}<span class="text-danger fw-bold">Sí</span>{% else %}No{% endif %}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <strong class="text-muted d-block">¿Criaderos?</strong>
+                        {% if inspeccion.criaderos_potenciales %}<span class="text-warning fw-bold">Sí</span>{% else %}No{% endif %}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <strong class="text-muted d-block">Depósitos</strong>
+                        {{ inspeccion.num_depositos }} ({{ inspeccion.depositos_positivos }} positivos)
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <strong class="text-muted d-block">Estado</strong>
+                        <span class="badge bg-success">{{ inspeccion.estado }}</span>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <strong class="text-muted d-block">Medidas aplicadas</strong>
+                        {% for m in inspeccion.medidas_aplicadas_lista %}
+                        <span class="badge bg-info me-1">{{ m }}</span>
+                        {% endfor %}
+                    </div>
+                    {% if inspeccion.observaciones %}
+                    <div class="col-12">
+                        <strong class="text-muted d-block">Observaciones</strong>
+                        {{ inspeccion.observaciones }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Clasificación de Riesgo</h6>
+                <div class="display-1 mb-2">{{ inspeccion.emoji_riesgo }}</div>
+                <h2><span class="badge bg-{{ inspeccion.color_riesgo }} fs-4">{{ inspeccion.nivel_riesgo }}</span></h2>
+                <p class="text-muted small mt-3">
+                    {% if inspeccion.nivel_riesgo == 'Alto' %}
+                    Intervención inmediata requerida (larvicida + seguimiento en 7 días)
+                    {% elif inspeccion.nivel_riesgo == 'Medio' %}
+                    Intervención en 15 días (eliminación de criaderos + educación)
+                    {% else %}
+                    Inspección de rutina en el próximo ciclo mensual
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        <div class="card shadow-sm mt-3 text-center">
+            <div class="card-body">
+                <a href="{% url 'inspecciones:nueva_vivienda' inspeccion.vivienda.pk %}" class="btn btn-primary w-100">
+                    <i class="bi bi-plus-circle"></i> Nueva inspección a esta vivienda
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

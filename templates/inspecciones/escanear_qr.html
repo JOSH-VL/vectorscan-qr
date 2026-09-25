@@ -1,0 +1,70 @@
+{% extends 'base/layout.html' %}
+{% block title %}Escanear QR — VectorScan QR{% endblock %}
+{% block extra_css %}
+<style>
+    #qr-reader { width: 100%; max-width: 500px; margin: 0 auto; }
+    #qr-reader video { border-radius: 12px; }
+</style>
+{% endblock %}
+{% block content %}
+<h4 class="mb-4"><i class="bi bi-qr-code-scan"></i> Escanear Código QR</h4>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <div id="qr-reader"></div>
+                <p class="text-muted mt-3" id="scan-status">Apunte la cámara al código QR de la vivienda</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6><i class="bi bi-keyboard"></i> Ingreso manual</h6>
+                <p class="text-muted small">Si no puede escanear, ingrese el código manualmente:</p>
+                <form method="get" action="{% url 'inspecciones:nueva' %}">
+                    <div class="input-group">
+                        <input type="text" name="qr" class="form-control font-monospace" placeholder="VSQR-XXXXXXXX">
+                        <button type="submit" class="btn btn-primary">Buscar</button>
+                    </div>
+                </form>
+                <hr>
+                <a href="{% url 'inspecciones:buscar' %}" class="btn btn-outline-secondary w-100"><i class="bi bi-search"></i> Buscar vivienda por dirección</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const scanner = new Html5QrcodeScanner("qr-reader", {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        rememberLastUsedCamera: true,
+    });
+
+    function onScanSuccess(decodedText) {
+        scanner.clear();
+        document.getElementById('scan-status').innerHTML =
+            '<span class="text-success"><i class="bi bi-check-circle"></i> QR detectado. Redirigiendo...</span>';
+
+        // El QR contiene: VECTORSCAN|VSQR-XXXXXXXX|ID
+        let parts = decodedText.split('|');
+        let qrCode = parts.length >= 2 ? parts[1] : decodedText;
+
+        // Redirigir al formulario de inspección
+        window.location.href = "{% url 'inspecciones:nueva' %}?qr=" + encodeURIComponent(qrCode);
+    }
+
+    function onScanFailure(error) {
+        // Silenciar errores de escaneo continuo
+    }
+
+    scanner.render(onScanSuccess, onScanFailure);
+});
+</script>
+{% endblock %}

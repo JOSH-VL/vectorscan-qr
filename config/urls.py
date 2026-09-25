@@ -8,6 +8,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('usuarios/', include('apps.usuarios.urls')),
     path('viviendas/', include('apps.viviendas.urls')),
+    path('inspecciones/', include('apps.inspecciones.urls')),
     path('', lambda r: redirect('usuarios:login')),
 ]
 
