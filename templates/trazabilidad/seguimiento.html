@@ -1,0 +1,107 @@
+{% extends 'base/layout.html' %}
+{% block title %}Seguimiento Prioritario — VectorScan QR{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-heart-pulse"></i> Seguimiento Prioritario</h4>
+    <a href="{% url 'trazabilidad:panel' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<!-- Viviendas de alto riesgo -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-danger bg-opacity-10 d-flex align-items-center">
+        <i class="bi bi-exclamation-octagon text-danger me-2"></i>
+        <h6 class="mb-0">Viviendas con Riesgo Alto Activo</h6>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Código</th>
+                    <th>Dirección</th>
+                    <th>Última Inspección</th>
+                    <th class="text-center">Días Transcurridos</th>
+                    <th>Estado</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in viviendas_riesgo_alto %}
+                <tr {% if item.urgente %}class="table-danger"{% endif %}>
+                    <td><span class="badge bg-dark font-monospace">{{ item.vivienda.codigo_qr }}</span></td>
+                    <td class="small">{{ item.vivienda.direccion|truncatechars:35 }}</td>
+                    <td class="small">{{ item.ultima_inspeccion.fecha_inspeccion|date:"d/m/Y" }}</td>
+                    <td class="text-center">
+                        <span class="badge {% if item.urgente %}bg-danger{% else %}bg-secondary{% endif %}">
+                            {{ item.dias }} días
+                        </span>
+                    </td>
+                    <td>
+                        {% if item.urgente %}
+                        <span class="text-danger small"><i class="bi bi-exclamation-triangle-fill"></i> Requiere visita</span>
+                        {% else %}
+                        <span class="text-muted small"><i class="bi bi-clock"></i> En plazo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'inspecciones:nueva_vivienda' item.vivienda.pk %}" class="btn btn-sm btn-primary py-0">
+                            <i class="bi bi-clipboard-plus"></i> Inspeccionar
+                        </a>
+                        <a href="{% url 'trazabilidad:historial_vivienda' item.vivienda.pk %}" class="btn btn-sm btn-outline-secondary py-0">
+                            <i class="bi bi-graph-up"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">
+                    <i class="bi bi-check-circle text-success fs-4 d-block mb-2"></i>
+                    No hay viviendas con riesgo alto activo
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Viviendas sin inspección reciente -->
+<div class="card shadow-sm">
+    <div class="card-header bg-warning bg-opacity-10 d-flex align-items-center">
+        <i class="bi bi-calendar-x text-warning me-2"></i>
+        <h6 class="mb-0">Viviendas sin Inspección en los Últimos 30 Días</h6>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Código</th>
+                    <th>Dirección</th>
+                    <th>Responsable</th>
+                    <th>Zona</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in sin_inspeccion %}
+                <tr>
+                    <td><span class="badge bg-dark font-monospace">{{ v.codigo_qr }}</span></td>
+                    <td class="small">{{ v.direccion|truncatechars:35 }}</td>
+                    <td class="small">{{ v.responsable_familia }}</td>
+                    <td class="small">{{ v.zona|default:"-" }}</td>
+                    <td>
+                        <a href="{% url 'inspecciones:nueva_vivienda' v.pk %}" class="btn btn-sm btn-outline-primary py-0">
+                            <i class="bi bi-clipboard-plus"></i> Inspeccionar
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">
+                    <i class="bi bi-check-circle text-success fs-4 d-block mb-2"></i>
+                    Todas las viviendas tienen inspección reciente
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

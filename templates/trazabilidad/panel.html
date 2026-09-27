@@ -1,0 +1,153 @@
+{% extends 'base/layout.html' %}
+{% block title %}Trazabilidad — VectorScan QR{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-activity"></i> Panel de Trazabilidad</h4>
+    <div class="d-flex gap-2">
+        <a href="{% url 'trazabilidad:seguimiento' %}" class="btn btn-outline-danger">
+            <i class="bi bi-heart-pulse"></i> Seguimiento Prioritario
+        </a>
+        <a href="{% url 'trazabilidad:auditoria' %}" class="btn btn-outline-primary">
+            <i class="bi bi-shield-check"></i> Auditoría
+        </a>
+    </div>
+</div>
+
+<!-- Métricas -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                        <i class="bi bi-house-heart text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0">{{ total_viviendas }}</h3>
+                        <small class="text-muted">Viviendas activas</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3 me-3">
+                        <i class="bi bi-clipboard2-pulse text-success fs-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0">{{ total_inspecciones }}</h3>
+                        <small class="text-muted">Inspecciones totales</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-info bg-opacity-10 p-3 me-3">
+                        <i class="bi bi-calendar2-pulse text-info fs-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0">{{ inspecciones_mes }}</h3>
+                        <small class="text-muted">Últimos 30 días</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
+                        <i class="bi bi-hourglass-split text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0">{{ viviendas_pendientes }}</h3>
+                        <small class="text-muted">Sin visita reciente</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Viviendas críticas -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white d-flex align-items-center">
+                <i class="bi bi-exclamation-diamond text-danger me-2"></i>
+                <h6 class="mb-0">Viviendas Recurrentes de Alto Riesgo</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Código</th>
+                            <th>Dirección</th>
+                            <th class="text-center">Veces Alto</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for v in viviendas_criticas %}
+                        <tr>
+                            <td><span class="badge bg-dark font-monospace">{{ v.codigo_qr }}</span></td>
+                            <td class="small">{{ v.direccion|truncatechars:30 }}</td>
+                            <td class="text-center"><span class="badge bg-danger">{{ v.veces_alto }}</span></td>
+                            <td>
+                                <a href="{% url 'trazabilidad:historial_vivienda' v.pk %}" class="btn btn-sm btn-outline-secondary py-0">
+                                    <i class="bi bi-graph-up"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-muted py-4">
+                            <i class="bi bi-check-circle text-success"></i> Sin viviendas recurrentes de alto riesgo
+                        </td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actividad reciente -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white d-flex align-items-center">
+                <i class="bi bi-clock-history text-primary me-2"></i>
+                <h6 class="mb-0">Actividad Reciente</h6>
+            </div>
+            <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                <ul class="list-group list-group-flush">
+                    {% for c in cambios_viviendas %}
+                    <li class="list-group-item py-2">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span class="badge {% if c.tipo_operacion == 'INSERT' %}bg-success{% elif c.tipo_operacion == 'UPDATE' %}bg-warning text-dark{% else %}bg-danger{% endif %} me-1">
+                                    {{ c.get_tipo_operacion_display }}
+                                </span>
+                                <span class="font-monospace small">{{ c.codigo_qr }}</span>
+                                <div class="small text-muted">
+                                    {{ c.usuario_cambio.nombre_completo|default:c.usuario_cambio.username }}
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ c.fecha_cambio|date:"d/m H:i" }}</small>
+                        </div>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-center text-muted py-4">Sin actividad registrada</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

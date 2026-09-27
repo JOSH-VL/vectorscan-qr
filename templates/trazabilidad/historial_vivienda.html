@@ -1,0 +1,178 @@
+{% extends 'base/layout.html' %}
+{% block title %}Historial {{ vivienda.codigo_qr }} — VectorScan QR{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-graph-up-arrow"></i> Historial de Vivienda</h4>
+    <a href="{% url 'trazabilidad:panel' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<!-- Datos de la vivienda -->
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <span class="badge bg-dark font-monospace fs-6 mb-2">{{ vivienda.codigo_qr }}</span>
+                <h5 class="mb-1">{{ vivienda.direccion }}</h5>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-person"></i> {{ vivienda.responsable_familia }}
+                    <span class="mx-2">·</span>
+                    <i class="bi bi-people"></i> {{ vivienda.num_habitantes }} habitantes
+                    {% if vivienda.zona %}<span class="mx-2">·</span><i class="bi bi-geo-alt"></i> {{ vivienda.zona }}{% endif %}
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                {% if tendencia == 'mejorando' %}
+                <span class="badge bg-success fs-6"><i class="bi bi-arrow-down-circle"></i> Mejorando</span>
+                {% elif tendencia == 'empeorando' %}
+                <span class="badge bg-danger fs-6"><i class="bi bi-arrow-up-circle"></i> Empeorando</span>
+                {% else %}
+                <span class="badge bg-secondary fs-6"><i class="bi bi-dash-circle"></i> Estable</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-2">
+        <div class="card shadow-sm text-center border-0">
+            <div class="card-body py-3">
+                <i class="bi bi-clipboard2-check text-primary fs-3"></i>
+                <h4 class="mb-0 mt-2">{{ stats.total }}</h4>
+                <small class="text-muted">Inspecciones</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-2">
+        <div class="card shadow-sm text-center border-0">
+            <div class="card-body py-3">
+                <i class="bi bi-thermometer-high text-danger fs-3"></i>
+                <h4 class="mb-0 mt-2 text-danger">{{ stats.alto }}</h4>
+                <small class="text-muted">Riesgo Alto</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-2">
+        <div class="card shadow-sm text-center border-0">
+            <div class="card-body py-3">
+                <i class="bi bi-thermometer-half text-warning fs-3"></i>
+                <h4 class="mb-0 mt-2 text-warning">{{ stats.medio }}</h4>
+                <small class="text-muted">Riesgo Medio</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-2">
+        <div class="card shadow-sm text-center border-0">
+            <div class="card-body py-3">
+                <i class="bi bi-thermometer-low text-success fs-3"></i>
+                <h4 class="mb-0 mt-2 text-success">{{ stats.bajo }}</h4>
+                <small class="text-muted">Riesgo Bajo</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Línea de tiempo visual -->
+{% if timeline %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white d-flex align-items-center">
+        <i class="bi bi-bar-chart-steps text-primary me-2"></i>
+        <h6 class="mb-0">Evolución del Riesgo</h6>
+    </div>
+    <div class="card-body">
+        <div class="d-flex align-items-end justify-content-between" style="height: 120px; gap: 4px;">
+            {% for i in timeline %}
+            <div class="text-center flex-fill" title="{{ i.fecha_inspeccion|date:'d/m/Y' }} — {{ i.nivel_riesgo }}">
+                <div class="rounded-top mx-auto
+                    {% if i.nivel_riesgo == 'Alto' %}bg-danger" style="height: 90px; width: 100%;
+                    {% elif i.nivel_riesgo == 'Medio' %}bg-warning" style="height: 60px; width: 100%;
+                    {% else %}bg-success" style="height: 30px; width: 100%;{% endif %}">
+                </div>
+                <small class="text-muted" style="font-size: 0.65rem;">{{ i.fecha_inspeccion|date:"d/m" }}</small>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="d-flex justify-content-center gap-3 mt-3 small">
+            <span><span class="badge bg-danger">&nbsp;</span> Alto</span>
+            <span><span class="badge bg-warning">&nbsp;</span> Medio</span>
+            <span><span class="badge bg-success">&nbsp;</span> Bajo</span>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Inspecciones -->
+    <div class="col-md-7 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex align-items-center">
+                <i class="bi bi-clipboard2-pulse text-success me-2"></i>
+                <h6 class="mb-0">Inspecciones Realizadas</h6>
+            </div>
+            <div class="card-body p-0" style="max-height: 450px; overflow-y: auto;">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Técnico</th>
+                            <th>Larvas</th>
+                            <th>Riesgo</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in inspecciones %}
+                        <tr>
+                            <td class="small">{{ i.fecha_inspeccion|date:"d/m/Y H:i" }}</td>
+                            <td class="small">{{ i.usuario.nombre_completo|default:i.usuario.username|truncatechars:18 }}</td>
+                            <td>{% if i.presencia_larvas %}<i class="bi bi-bug-fill text-danger"></i>{% else %}<i class="bi bi-check-circle text-success"></i>{% endif %}</td>
+                            <td><span class="badge bg-{{ i.color_riesgo }}">{{ i.nivel_riesgo }}</span></td>
+                            <td>
+                                <a href="{% url 'inspecciones:detalle' i.pk %}" class="btn btn-sm btn-outline-secondary py-0">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center text-muted py-4">Sin inspecciones registradas</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cambios en la vivienda -->
+    <div class="col-md-5 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex align-items-center">
+                <i class="bi bi-journal-text text-info me-2"></i>
+                <h6 class="mb-0">Registro de Cambios</h6>
+            </div>
+            <div class="card-body p-0" style="max-height: 450px; overflow-y: auto;">
+                <ul class="list-group list-group-flush">
+                    {% for c in cambios %}
+                    <li class="list-group-item py-2">
+                        <div class="d-flex justify-content-between">
+                            <span class="badge {% if c.tipo_operacion == 'INSERT' %}bg-success{% elif c.tipo_operacion == 'UPDATE' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                {{ c.get_tipo_operacion_display }}
+                            </span>
+                            <small class="text-muted">{{ c.fecha_cambio|date:"d/m/Y H:i" }}</small>
+                        </div>
+                        <small class="text-muted d-block mt-1">
+                            <i class="bi bi-person-badge"></i>
+                            {{ c.usuario_cambio.nombre_completo|default:c.usuario_cambio.username }}
+                        </small>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-center text-muted py-4">Sin cambios registrados</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

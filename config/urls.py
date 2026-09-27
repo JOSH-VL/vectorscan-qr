@@ -9,6 +9,7 @@ urlpatterns = [
     path('usuarios/', include('apps.usuarios.urls')),
     path('viviendas/', include('apps.viviendas.urls')),
     path('inspecciones/', include('apps.inspecciones.urls')),
+    path('trazabilidad/', include('apps.trazabilidad.urls')),
     path('', lambda r: redirect('usuarios:login')),
 ]
 

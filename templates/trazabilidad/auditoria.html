@@ -1,0 +1,85 @@
+{% extends 'base/layout.html' %}
+{% block title %}Auditoría — VectorScan QR{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-shield-check"></i> Registro de Auditoría</h4>
+    <a href="{% url 'trazabilidad:panel' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<!-- Filtros -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" class="form-control" placeholder="Buscar por código o detalle..." value="{{ busqueda }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="modulo" class="form-select">
+                    <option value="todos" {% if modulo == 'todos' %}selected{% endif %}>Todos los módulos</option>
+                    <option value="viviendas" {% if modulo == 'viviendas' %}selected{% endif %}>Viviendas</option>
+                    <option value="inspecciones" {% if modulo == 'inspecciones' %}selected{% endif %}>Inspecciones</option>
+                    <option value="usuarios" {% if modulo == 'usuarios' %}selected{% endif %}>Usuarios</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-funnel"></i> Filtrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<p class="text-muted mb-3">
+    <i class="bi bi-info-circle"></i> Mostrando {{ registros|length }} de {{ total }} registros
+</p>
+
+<!-- Tabla de auditoría -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Fecha y Hora</th>
+                    <th>Módulo</th>
+                    <th>Objeto</th>
+                    <th>Detalle</th>
+                    <th>Operación</th>
+                    <th>Usuario</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in registros %}
+                <tr>
+                    <td class="small">{{ r.fecha|date:"d/m/Y H:i:s" }}</td>
+                    <td>
+                        <i class="bi bi-{{ r.icono }} text-muted"></i>
+                        <span class="small">{{ r.modulo }}</span>
+                    </td>
+                    <td><span class="font-monospace small">{{ r.objeto }}</span></td>
+                    <td class="small text-muted">{{ r.detalle|truncatechars:35 }}</td>
+                    <td>
+                        <span class="badge {% if r.tipo_op == 'INSERT' %}bg-success{% elif r.tipo_op == 'UPDATE' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                            {{ r.operacion }}
+                        </span>
+                    </td>
+                    <td class="small">
+                        {% if r.usuario %}
+                        <i class="bi bi-person-circle text-muted"></i>
+                        {{ r.usuario.nombre_completo|default:r.usuario.username }}
+                        {% else %}
+                        <span class="text-muted">Sistema</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">Sin registros de auditoría</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
