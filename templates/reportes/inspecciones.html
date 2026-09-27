@@ -1,0 +1,78 @@
+{% extends 'base/layout.html' %}
+{% block title %}Reporte Inspecciones — VectorScan QR{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-clipboard2-data"></i> Reporte de Inspecciones</h4>
+    <div class="d-flex gap-2">
+        <a href="{% url 'reportes:exportar_excel' %}?desde={{ desde }}&hasta={{ hasta }}&zona={{ zona }}&riesgo={{ riesgo }}" class="btn btn-success">
+            <i class="bi bi-file-earmark-excel"></i> Excel
+        </a>
+        <a href="{% url 'reportes:exportar_csv' %}?desde={{ desde }}&hasta={{ hasta }}&zona={{ zona }}&riesgo={{ riesgo }}" class="btn btn-outline-secondary">
+            <i class="bi bi-filetype-csv"></i> CSV
+        </a>
+        <a href="{% url 'reportes:panel' %}" class="btn btn-outline-primary"><i class="bi bi-arrow-left"></i> Volver</a>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label small">Desde</label>
+                <input type="date" name="desde" class="form-control" value="{{ desde }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Hasta</label>
+                <input type="date" name="hasta" class="form-control" value="{{ hasta }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Zona</label>
+                <select name="zona" class="form-select">
+                    <option value="">Todas</option>
+                    {% for z in zonas %}<option value="{{ z }}" {% if zona == z %}selected{% endif %}>{{ z }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Riesgo</label>
+                <select name="riesgo" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="Alto" {% if riesgo == 'Alto' %}selected{% endif %}>Alto</option>
+                    <option value="Medio" {% if riesgo == 'Medio' %}selected{% endif %}>Medio</option>
+                    <option value="Bajo" {% if riesgo == 'Bajo' %}selected{% endif %}>Bajo</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Filtrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<p class="text-muted mb-3"><i class="bi bi-info-circle"></i> {{ total }} inspecciones encontradas</p>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover table-sm mb-0">
+            <thead class="table-dark">
+                <tr><th>Fecha</th><th>Código QR</th><th>Dirección</th><th>Técnico</th><th>Larvas</th><th>Criaderos</th><th>Depósitos</th><th>Riesgo</th></tr>
+            </thead>
+            <tbody>
+                {% for i in inspecciones %}
+                <tr>
+                    <td class="small">{{ i.fecha_inspeccion|date:"d/m/Y H:i" }}</td>
+                    <td><span class="badge bg-dark font-monospace">{{ i.vivienda.codigo_qr }}</span></td>
+                    <td class="small">{{ i.vivienda.direccion|truncatechars:30 }}</td>
+                    <td class="small">{{ i.usuario.nombre_completo|default:i.usuario.username|truncatechars:20 }}</td>
+                    <td>{% if i.presencia_larvas %}<i class="bi bi-bug-fill text-danger"></i>{% else %}<i class="bi bi-check text-success"></i>{% endif %}</td>
+                    <td>{% if i.criaderos_potenciales %}<i class="bi bi-exclamation-triangle text-warning"></i>{% else %}<i class="bi bi-check text-success"></i>{% endif %}</td>
+                    <td class="text-center">{{ i.num_depositos }}</td>
+                    <td><span class="badge bg-{{ i.color_riesgo }}">{{ i.nivel_riesgo }}</span></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-4">Sin inspecciones para los filtros seleccionados</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

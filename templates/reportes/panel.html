@@ -1,0 +1,166 @@
+{% extends 'base/layout.html' %}
+{% block title %}Reportes — VectorScan QR{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-file-earmark-bar-graph"></i> Reportes y Exportación</h4>
+</div>
+
+<!-- Resumen rápido -->
+<div class="row mb-4">
+    <div class="col-md-2 mb-2">
+        <div class="card shadow-sm text-center border-0 h-100">
+            <div class="card-body py-3">
+                <i class="bi bi-house-heart text-primary fs-3"></i>
+                <h4 class="mb-0 mt-1">{{ stats.viviendas }}</h4>
+                <small class="text-muted">Viviendas</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-2">
+        <div class="card shadow-sm text-center border-0 h-100">
+            <div class="card-body py-3">
+                <i class="bi bi-clipboard2-pulse text-success fs-3"></i>
+                <h4 class="mb-0 mt-1">{{ stats.inspecciones }}</h4>
+                <small class="text-muted">Inspecciones</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-2">
+        <div class="card shadow-sm text-center border-0 h-100">
+            <div class="card-body py-3">
+                <i class="bi bi-calendar2-pulse text-info fs-3"></i>
+                <h4 class="mb-0 mt-1">{{ stats.insp_mes }}</h4>
+                <small class="text-muted">Este mes</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-2">
+        <div class="card shadow-sm text-center border-0 h-100">
+            <div class="card-body py-3">
+                <i class="bi bi-thermometer-high text-danger fs-3"></i>
+                <h4 class="mb-0 mt-1 text-danger">{{ stats.alto }}</h4>
+                <small class="text-muted">Alto</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-2">
+        <div class="card shadow-sm text-center border-0 h-100">
+            <div class="card-body py-3">
+                <i class="bi bi-thermometer-half text-warning fs-3"></i>
+                <h4 class="mb-0 mt-1 text-warning">{{ stats.medio }}</h4>
+                <small class="text-muted">Medio</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-2">
+        <div class="card shadow-sm text-center border-0 h-100">
+            <div class="card-body py-3">
+                <i class="bi bi-thermometer-low text-success fs-3"></i>
+                <h4 class="mb-0 mt-1 text-success">{{ stats.bajo }}</h4>
+                <small class="text-muted">Bajo</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tipos de reportes -->
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <div class="card shadow-sm h-100 border-0">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                        <i class="bi bi-clipboard2-data text-primary fs-4"></i>
+                    </div>
+                    <h6 class="mb-0">Inspecciones</h6>
+                </div>
+                <p class="text-muted small">Detalle de todas las inspecciones realizadas con filtros por fecha, zona y nivel de riesgo.</p>
+                <a href="{% url 'reportes:inspecciones' %}" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-table"></i> Ver Reporte
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card shadow-sm h-100 border-0">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="rounded-circle bg-danger bg-opacity-10 p-3 me-3">
+                        <i class="bi bi-geo-alt text-danger fs-4"></i>
+                    </div>
+                    <h6 class="mb-0">Riesgo por Zona</h6>
+                </div>
+                <p class="text-muted small">Distribución de niveles de riesgo por cada zona del casco urbano.</p>
+                <a href="{% url 'reportes:riesgo' %}" class="btn btn-outline-danger w-100">
+                    <i class="bi bi-bar-chart"></i> Ver Reporte
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card shadow-sm h-100 border-0">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3 me-3">
+                        <i class="bi bi-person-check text-success fs-4"></i>
+                    </div>
+                    <h6 class="mb-0">Productividad</h6>
+                </div>
+                <p class="text-muted small">Número de inspecciones realizadas por cada técnico de campo.</p>
+                <a href="{% url 'reportes:productividad' %}" class="btn btn-outline-success w-100">
+                    <i class="bi bi-people"></i> Ver Reporte
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr>
+
+<!-- Exportación rápida -->
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white">
+        <h6 class="mb-0"><i class="bi bi-download"></i> Exportación Rápida</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Desde</label>
+                <input type="date" name="desde" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Hasta</label>
+                <input type="date" name="hasta" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Zona</label>
+                <select name="zona" class="form-select">
+                    <option value="">Todas</option>
+                    {% for z in zonas %}
+                    <option value="{{ z }}">{{ z }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <a href="{% url 'reportes:exportar_excel' %}" class="btn btn-success w-100" id="btn-excel">
+                    <i class="bi bi-file-earmark-excel"></i> Excel
+                </a>
+            </div>
+            <div class="col-md-2">
+                <a href="{% url 'reportes:exportar_csv' %}" class="btn btn-outline-secondary w-100" id="btn-csv">
+                    <i class="bi bi-filetype-csv"></i> CSV
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.querySelectorAll('form')[0].addEventListener('change', function() {
+    const params = new URLSearchParams(new FormData(this)).toString();
+    document.getElementById('btn-excel').href = "{% url 'reportes:exportar_excel' %}?" + params;
+    document.getElementById('btn-csv').href = "{% url 'reportes:exportar_csv' %}?" + params;
+});
+</script>
+{% endblock %}

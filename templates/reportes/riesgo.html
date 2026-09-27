@@ -1,0 +1,48 @@
+{% extends 'base/layout.html' %}
+{% block title %}Riesgo por Zona — VectorScan QR{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-geo-alt"></i> Distribución de Riesgo por Zona</h4>
+    <a href="{% url 'reportes:panel' %}" class="btn btn-outline-primary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="row">
+    {% for z in data_zonas %}
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-geo-alt text-primary"></i> {{ z.zona }}</h6>
+                <span class="badge bg-secondary">{{ z.total }} inspecciones</span>
+            </div>
+            <div class="card-body">
+                {% if z.total > 0 %}
+                <!-- Barra visual -->
+                <div class="d-flex rounded overflow-hidden mb-3" style="height: 30px;">
+                    {% if z.alto > 0 %}
+                    <div class="bg-danger d-flex align-items-center justify-content-center text-white small" style="width: {% widthratio z.alto z.total 100 %}%;">{{ z.alto }}</div>
+                    {% endif %}
+                    {% if z.medio > 0 %}
+                    <div class="bg-warning d-flex align-items-center justify-content-center small" style="width: {% widthratio z.medio z.total 100 %}%;">{{ z.medio }}</div>
+                    {% endif %}
+                    {% if z.bajo > 0 %}
+                    <div class="bg-success d-flex align-items-center justify-content-center text-white small" style="width: {% widthratio z.bajo z.total 100 %}%;">{{ z.bajo }}</div>
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-between small">
+                    <span><span class="badge bg-danger">{{ z.alto }}</span> Alto</span>
+                    <span><span class="badge bg-warning text-dark">{{ z.medio }}</span> Medio</span>
+                    <span><span class="badge bg-success">{{ z.bajo }}</span> Bajo</span>
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0">Sin inspecciones</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info"><i class="bi bi-info-circle"></i> No hay datos de zonas disponibles.</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

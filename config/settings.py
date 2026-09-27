@@ -13,6 +13,7 @@ INSTALLED_APPS = [
     'apps.viviendas',
     'apps.inspecciones',
     'apps.trazabilidad',
+    'apps.reportes',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware','django.contrib.sessions.middleware.SessionMiddleware',
