@@ -58,13 +58,21 @@ def panel_reportes(request):
         'zona', flat=True
     ).distinct().order_by('zona')
 
+    # Distribución de riesgo por vivienda según su ÚLTIMA inspección activa (no
+    # por evento de inspección): cuadra con el Capítulo VI → 30 viviendas, 8/12/10.
+    dist = {'Alto': 0, 'Medio': 0, 'Bajo': 0}
+    for v in Vivienda.objects.filter(estado='Activo').prefetch_related('inspecciones'):
+        ultima = v.inspecciones.filter(estado='Activo').first()
+        if ultima:
+            dist[ultima.nivel_riesgo] += 1
+
     stats = {
         'viviendas': Vivienda.objects.filter(estado='Activo').count(),
-        'inspecciones': Inspeccion.objects.filter(estado='Activo').count(),
+        'viviendas_inspeccionadas': sum(dist.values()),
         'insp_mes': Inspeccion.objects.filter(estado='Activo', fecha_inspeccion__gte=hace_30).count(),
-        'alto': Inspeccion.objects.filter(estado='Activo', nivel_riesgo='Alto').count(),
-        'medio': Inspeccion.objects.filter(estado='Activo', nivel_riesgo='Medio').count(),
-        'bajo': Inspeccion.objects.filter(estado='Activo', nivel_riesgo='Bajo').count(),
+        'alto': dist['Alto'],
+        'medio': dist['Medio'],
+        'bajo': dist['Bajo'],
     }
 
     return render(request, 'reportes/panel.html', {
@@ -98,15 +106,19 @@ def reporte_riesgo(request):
     for z in zonas:
         if not z:
             continue
-        inspecciones_zona = Inspeccion.objects.filter(
-            estado='Activo', vivienda__zona=z
-        )
+        # Conteo por vivienda (última inspección activa), no por inspección,
+        # para que los totales por zona cuadren con el documento (30 y 8/12/10).
+        d = {'Alto': 0, 'Medio': 0, 'Bajo': 0}
+        for v in Vivienda.objects.filter(estado='Activo', zona=z).prefetch_related('inspecciones'):
+            ultima = v.inspecciones.filter(estado='Activo').first()
+            if ultima:
+                d[ultima.nivel_riesgo] += 1
         data_zonas.append({
             'zona': z,
-            'total': inspecciones_zona.count(),
-            'alto': inspecciones_zona.filter(nivel_riesgo='Alto').count(),
-            'medio': inspecciones_zona.filter(nivel_riesgo='Medio').count(),
-            'bajo': inspecciones_zona.filter(nivel_riesgo='Bajo').count(),
+            'total': sum(d.values()),
+            'alto': d['Alto'],
+            'medio': d['Medio'],
+            'bajo': d['Bajo'],
         })
 
     return render(request, 'reportes/riesgo.html', {'data_zonas': data_zonas})

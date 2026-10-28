@@ -20,7 +20,12 @@ def panel_trazabilidad(request):
 
     # Métricas generales
     total_viviendas = Vivienda.objects.filter(estado='Activo').count()
-    total_inspecciones = Inspeccion.objects.filter(estado='Activo').count()
+    # Viviendas inspeccionadas (únicas), no inspecciones totales: cuadra con el
+    # Capítulo VI (30 viviendas inspeccionadas, no 40 eventos de inspección).
+    viviendas_inspeccionadas = (
+        Inspeccion.objects.filter(estado='Activo')
+        .values('vivienda').distinct().count()
+    )
     inspecciones_mes = Inspeccion.objects.filter(
         estado='Activo', fecha_inspeccion__gte=hace_30_dias
     ).count()
@@ -50,7 +55,7 @@ def panel_trazabilidad(request):
 
     return render(request, 'trazabilidad/panel.html', {
         'total_viviendas': total_viviendas,
-        'total_inspecciones': total_inspecciones,
+        'viviendas_inspeccionadas': viviendas_inspeccionadas,
         'inspecciones_mes': inspecciones_mes,
         'viviendas_pendientes': viviendas_pendientes,
         'viviendas_criticas': viviendas_criticas,
