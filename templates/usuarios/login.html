@@ -63,6 +63,31 @@
             100% { transform: translateY(-115vh) scale(0.4); opacity: 0; }
         }
 
+        /* Enjambre de mosquitos de fondo (referencia al dengue / Aedes) */
+        .vs-bugs { position: absolute; inset: 0; overflow: hidden; z-index: 1; pointer-events: none; }
+        .vs-bug { position: absolute; left: -10%; color: var(--cyan); opacity: .16; will-change: transform; }
+        .vs-bug .wing { transform-origin: 60% 60%; animation: flap .2s ease-in-out infinite alternate; }
+        .vs-bug .wing-2 { animation-delay: .1s; }
+        @keyframes driftA {
+            0%   { transform: translate(0,0) rotate(-6deg); }
+            25%  { transform: translate(32vw,-7vh) rotate(6deg); }
+            50%  { transform: translate(62vw,5vh) rotate(-4deg); }
+            75%  { transform: translate(92vw,-4vh) rotate(5deg); }
+            100% { transform: translate(122vw,3vh) rotate(-6deg); }
+        }
+        @keyframes driftB {
+            0%   { transform: translate(0,0) rotate(5deg); }
+            30%  { transform: translate(38vw,8vh) rotate(-5deg); }
+            60%  { transform: translate(74vw,-6vh) rotate(4deg); }
+            100% { transform: translate(122vw,4vh) rotate(5deg); }
+        }
+        @keyframes driftC {
+            0%   { transform: translate(0,0) rotate(-3deg); }
+            40%  { transform: translate(48vw,-10vh) rotate(6deg); }
+            70%  { transform: translate(86vw,6vh) rotate(-5deg); }
+            100% { transform: translate(122vw,-2vh) rotate(-3deg); }
+        }
+
         .vs-hero-content { position: relative; z-index: 2; max-width: 460px;
             animation: slideInLeft .8s cubic-bezier(.2,.8,.2,1) both; }
         @keyframes slideInLeft { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
@@ -234,6 +259,7 @@
     <!-- Panel visual -->
     <section class="vs-hero">
         <div class="vs-particles" id="particles"></div>
+        <div class="vs-bugs" id="bugs"></div>
 
         <div class="vs-hero-content">
             <span class="vs-badge"><i class="bi bi-qr-code-scan"></i> Vigilancia Epidemiológica</span>
@@ -355,6 +381,42 @@
             s.style.animationDelay = (Math.random() * 8) + 's';
             s.style.opacity = (0.1 + Math.random() * 0.3).toFixed(2);
             cont.appendChild(s);
+        }
+    })();
+
+    // Enjambre de mosquitos de fondo (referencia al dengue). Cantidad según
+    // el ancho de pantalla (responsive) y se omite si el usuario pidió menos
+    // movimiento.
+    (function () {
+        var cont = document.getElementById('bugs');
+        if (!cont || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        var svg = '<svg viewBox="0 0 120 80" fill="none" stroke="currentColor" stroke-width="3" ' +
+                  'stroke-linecap="round" width="100%" height="100%">' +
+                  '<ellipse class="wing" cx="55" cy="30" rx="22" ry="9" transform="rotate(-25 55 30)" fill="rgba(56,189,248,.18)"/>' +
+                  '<ellipse class="wing wing-2" cx="70" cy="30" rx="22" ry="9" transform="rotate(-8 70 30)" fill="rgba(56,189,248,.12)"/>' +
+                  '<line x1="58" y1="44" x2="92" y2="60"/>' +
+                  '<circle cx="54" cy="42" r="6" fill="currentColor"/>' +
+                  '<line x1="50" y1="44" x2="34" y2="54"/>' +
+                  '<path d="M60 46 L46 66 M66 48 L58 70 M72 50 L72 72 M78 52 L88 70"/>' +
+                  '<path d="M52 38 L44 28 M56 38 L52 26"/></svg>';
+
+        var drifts = ['driftA', 'driftB', 'driftC'];
+        var total  = window.innerWidth < 860 ? 3 : 5;   // menos en móvil
+
+        for (var i = 0; i < total; i++) {
+            var bug  = document.createElement('div');
+            var size = 22 + Math.random() * 28;          // 22–50px
+            bug.className = 'vs-bug';
+            bug.innerHTML = svg;
+            bug.style.top = (8 + Math.random() * 80) + '%';
+            bug.style.width = size + 'px';
+            bug.style.height = (size * 0.66) + 'px';
+            bug.style.opacity = (0.1 + Math.random() * 0.12).toFixed(2);
+            bug.style.animation = drifts[i % drifts.length] + ' ' +
+                                  (16 + Math.random() * 12).toFixed(1) + 's linear infinite';
+            bug.style.animationDelay = (Math.random() * 14).toFixed(1) + 's';
+            cont.appendChild(bug);
         }
     })();
 
