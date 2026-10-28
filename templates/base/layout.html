@@ -14,6 +14,31 @@
         .sidebar a:hover, .sidebar a.active { color: #fff; background-color: rgba(255,255,255,0.1); }
         .main-content { padding: 2rem; }
 
+        /* ---- Barra superior móvil + sidebar colapsable ---- */
+        .app-topbar { display: none; }
+        .sidebar-backdrop { display: none; }
+        @media (max-width: 767.98px) {
+            .app-topbar {
+                display: flex; align-items: center; gap: .6rem;
+                background: #1e3a5f; color: #fff; padding: .55rem .9rem;
+                position: sticky; top: 0; z-index: 1030;
+            }
+            .app-topbar .brand { font-weight: 700; }
+            .sidebar {
+                position: fixed; top: 0; left: -280px; height: 100%;
+                width: 260px !important; z-index: 1045;
+                transition: left .28s ease; overflow-y: auto; overflow-x: hidden;
+            }
+            .sidebar.open { left: 0; box-shadow: 0 0 40px rgba(0,0,0,.5); }
+            .sidebar-backdrop {
+                display: block; position: fixed; inset: 0;
+                background: rgba(0,0,0,.45); z-index: 1040;
+                opacity: 0; visibility: hidden; transition: opacity .28s;
+            }
+            .sidebar-backdrop.show { opacity: 1; visibility: visible; }
+            .main-content { padding: 1.25rem; }
+        }
+
         /* Mosquitos decorativos del sidebar (referencia al dengue / Aedes).
            z-index negativo: quedan sobre el fondo azul pero detras de los
            modulos, y no bloquean clics. */
@@ -22,6 +47,8 @@
         .sidebar-bug .wing { transform-origin: 60% 60%;
             animation: sbFlap .2s ease-in-out infinite alternate; }
         .sidebar-bug .wing-2 { animation-delay: .1s; }
+        /* Mosquito estático (siempre visible, sin animación) junto a la marca */
+        .sidebar-bug-static { width: 34px; height: 23px; color: #38bdf8; flex: 0 0 auto; }
         .sidebar-bug-1 { width: 52px; left: -14px; top: 26%; animation: sbFly1 15s ease-in-out infinite; }
         .sidebar-bug-2 { width: 38px; right: -12px; top: 64%; animation: sbFly2 19s ease-in-out infinite; animation-delay: 4s; }
         @keyframes sbFlap {
@@ -90,7 +117,19 @@
                 <path d="M60 46 L46 66 M66 48 L58 70 M72 50 L72 72 M78 52 L88 70"/>
                 <path d="M52 38 L44 28 M56 38 L52 26"/>
             </svg>
-            <h5 class="text-white mb-4"><i class="bi bi-shield-check"></i> VectorScan QR</h5>
+            <div class="d-flex align-items-center mb-4">
+                <!-- Mosquito estático (referencia al dengue) a la izquierda de la marca -->
+                <svg class="sidebar-bug-static me-2" viewBox="0 0 120 80" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true">
+                    <ellipse cx="55" cy="30" rx="22" ry="9" transform="rotate(-25 55 30)" fill="rgba(56,189,248,.25)"/>
+                    <ellipse cx="70" cy="30" rx="22" ry="9" transform="rotate(-8 70 30)" fill="rgba(56,189,248,.18)"/>
+                    <line x1="58" y1="44" x2="92" y2="60"/>
+                    <circle cx="54" cy="42" r="6" fill="currentColor"/>
+                    <line x1="50" y1="44" x2="34" y2="54"/>
+                    <path d="M60 46 L46 66 M66 48 L58 70 M72 50 L72 72 M78 52 L88 70"/>
+                    <path d="M52 38 L44 28 M56 38 L52 26"/>
+                </svg>
+                <h5 class="text-white mb-0"><i class="bi bi-shield-check"></i> VectorScan QR</h5>
+            </div>
             <a href="{% url 'usuarios:lista' %}" class="d-block py-2 px-3 rounded mb-1"><i class="bi bi-speedometer2"></i> Dashboard</a>
             <a href="{% url 'usuarios:lista' %}" class="d-block py-2 px-3 rounded mb-1"><i class="bi bi-people"></i> Usuarios</a>
             <a href="/viviendas/" class="d-block py-2 px-3 rounded mb-1"><i class="bi bi-house"></i> Viviendas</a>
@@ -105,23 +144,53 @@
                 <a href="{% url 'usuarios:logout' %}" class="text-danger small"><i class="bi bi-box-arrow-left"></i> Cerrar sesión</a>
             </div>
         </nav>
+        <!-- Fondo oscuro al abrir el menú en móvil -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
         <!-- Main content -->
-        <div class="flex-grow-1 main-content">
-            {% if messages %}
-            {% for msg in messages %}
-            <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
-                {{ msg }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="flex-grow-1">
+            <!-- Barra superior: solo visible en móvil, abre el menú de módulos -->
+            <div class="app-topbar">
+                <button id="sidebarToggle" class="btn btn-sm btn-outline-light" type="button" aria-label="Abrir menú de módulos">
+                    <i class="bi bi-list fs-5"></i>
+                </button>
+                <span class="brand"><i class="bi bi-shield-check"></i> VectorScan QR</span>
             </div>
-            {% endfor %}
-            {% endif %}
-            {% block content %}{% endblock %}
+            <div class="main-content">
+                {% if messages %}
+                {% for msg in messages %}
+                <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+                    {{ msg }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% block content %}{% endblock %}
+            </div>
         </div>
     </div>
     {% else %}
         {% block content_public %}{% endblock %}
     {% endif %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Menú lateral colapsable en móvil
+        (function () {
+            var toggle = document.getElementById('sidebarToggle');
+            var sidebar = document.querySelector('.sidebar');
+            var backdrop = document.getElementById('sidebarBackdrop');
+            if (!toggle || !sidebar) return;
+            function abrir()  { sidebar.classList.add('open');    if (backdrop) backdrop.classList.add('show'); }
+            function cerrar() { sidebar.classList.remove('open'); if (backdrop) backdrop.classList.remove('show'); }
+            toggle.addEventListener('click', function () {
+                sidebar.classList.contains('open') ? cerrar() : abrir();
+            });
+            if (backdrop) backdrop.addEventListener('click', cerrar);
+            // Al tocar un módulo se cierra el menú (antes de navegar)
+            sidebar.querySelectorAll('a').forEach(function (a) {
+                a.addEventListener('click', cerrar);
+            });
+        })();
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

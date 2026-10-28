@@ -13,8 +13,12 @@
     <div class="col-md-6">
         <div class="card shadow-sm">
             <div class="card-body text-center">
+                <select id="cam-select" class="form-select form-select-sm mb-3 d-none" aria-label="Seleccionar cámara"></select>
                 <div id="qr-reader"></div>
-                <p class="text-muted mt-3" id="scan-status">Apunte la cámara al código QR de la vivienda</p>
+                <p class="text-muted mt-3 mb-2" id="scan-status">Apunte la cámara al código QR de la vivienda</p>
+                <button id="cam-toggle" type="button" class="btn btn-outline-danger btn-sm d-none">
+                    <i class="bi bi-pause-circle"></i> Detener cámara
+                </button>
             </div>
         </div>
     </div>
@@ -40,32 +44,112 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const scanner = new Html5QrcodeScanner("qr-reader", {
-        facingMode: "environment",
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        rememberLastUsedCamera: true,
-    });
+document.addEventListener('DOMContentLoaded', function () {
+    const statusEl = document.getElementById('scan-status');
+    const selectEl = document.getElementById('cam-select');
+    const toggleBtn = document.getElementById('cam-toggle');
+    const html5Qr = new Html5Qrcode('qr-reader');
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    let running = false;
+    let currentCameraId = null;
 
-    function onScanSuccess(decodedText) {
-        scanner.clear();
-        document.getElementById('scan-status').innerHTML =
-            '<span class="text-success"><i class="bi bi-check-circle"></i> QR detectado. Redirigiendo...</span>';
+    // Refleja en el botón si la cámara está activa o detenida.
+    function marcarActiva() {
+        running = true;
+        toggleBtn.classList.remove('d-none', 'btn-outline-success');
+        toggleBtn.classList.add('btn-outline-danger');
+        toggleBtn.innerHTML = '<i class="bi bi-pause-circle"></i> Detener cámara';
+        statusEl.textContent = 'Apunte la cámara al código QR de la vivienda';
+    }
+    function marcarDetenida() {
+        running = false;
+        toggleBtn.classList.remove('btn-outline-danger');
+        toggleBtn.classList.add('btn-outline-success');
+        toggleBtn.innerHTML = '<i class="bi bi-play-circle"></i> Reanudar cámara';
+        statusEl.textContent = 'Cámara detenida. Podés usar el ingreso manual.';
+    }
 
+    function mostrarError(err) {
+        statusEl.innerHTML =
+            '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> No se pudo iniciar la cámara. Usá el ingreso manual.</span>';
+        console.error('Escáner QR:', err);
+    }
+
+    function irAInspeccion(decodedText) {
         // El QR contiene: VECTORSCAN|VSQR-XXXXXXXX|ID
-        let parts = decodedText.split('|');
-        let qrCode = parts.length >= 2 ? parts[1] : decodedText;
-
-        // Redirigir al formulario de inspección
+        const parts = decodedText.split('|');
+        const qrCode = parts.length >= 2 ? parts[1] : decodedText;
+        statusEl.innerHTML =
+            '<span class="text-success"><i class="bi bi-check-circle"></i> QR detectado. Redirigiendo...</span>';
         window.location.href = "{% url 'inspecciones:nueva' %}?qr=" + encodeURIComponent(qrCode);
     }
 
-    function onScanFailure(error) {
-        // Silenciar errores de escaneo continuo
+    function onScanSuccess(decodedText) {
+        if (running) {
+            running = false;
+            html5Qr.stop().then(function () { irAInspeccion(decodedText); })
+                          .catch(function () { irAInspeccion(decodedText); });
+        } else {
+            irAInspeccion(decodedText);
+        }
     }
 
-    scanner.render(onScanSuccess, onScanFailure);
+    function iniciar(cameraId) {
+        currentCameraId = cameraId;
+        return html5Qr.start(cameraId, config, onScanSuccess, function () {})
+                      .then(marcarActiva);
+    }
+
+    // Botón detener / reanudar: útil si el técnico solo tiene el número del QR
+    // y prefiere el ingreso manual.
+    toggleBtn.addEventListener('click', function () {
+        if (running) {
+            html5Qr.stop().then(marcarDetenida).catch(marcarDetenida);
+        } else if (currentCameraId) {
+            iniciar(currentCameraId).catch(mostrarError);
+        }
+    });
+
+    // Una cámara es "frontal" si su etiqueta lo indica (Android suele decir
+    // "facing front" / "front"). Todo lo demás se trata como trasera.
+    function esFrontal(cam) {
+        return /front|user|frontal|selfie/i.test(cam.label || '');
+    }
+
+    Html5Qrcode.getCameras().then(function (cameras) {
+        if (!cameras || !cameras.length) {
+            statusEl.textContent = 'No se detectaron cámaras disponibles.';
+            return;
+        }
+        // Orden solicitado: traseras primero, la(s) frontal(es) al final.
+        const traseras  = cameras.filter(function (c) { return !esFrontal(c); });
+        const frontales = cameras.filter(esFrontal);
+        const ordenadas = traseras.concat(frontales);
+
+        // Poblar el selector (se mantiene la opción de cambiar de cámara).
+        ordenadas.forEach(function (c, i) {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.label || ('Cámara ' + (i + 1));
+            selectEl.appendChild(opt);
+        });
+        if (ordenadas.length > 1) selectEl.classList.remove('d-none');
+
+        // Cambiar de cámara desde el selector.
+        selectEl.addEventListener('change', function () {
+            const nuevaId = selectEl.value;
+            const arrancar = function () { iniciar(nuevaId).catch(mostrarError); };
+            if (running) {
+                running = false;
+                html5Qr.stop().then(arrancar).catch(arrancar);
+            } else {
+                arrancar();
+            }
+        });
+
+        // Arrancar con la primera opción (la trasera).
+        iniciar(ordenadas[0].id).catch(mostrarError);
+    }).catch(mostrarError);
 });
 </script>
 {% endblock %}
