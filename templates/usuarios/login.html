@@ -6,36 +6,427 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión — VectorScan QR</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
-        body { background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .login-card { max-width: 400px; width: 100%; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+        :root {
+            --azul: #1e3a5f;
+            --azul-2: #2d5a87;
+            --azul-3: #14263f;
+            --cyan: #38bdf8;
+            --teal: #2dd4bf;
+        }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: var(--azul);
+        }
+
+        /* ---------- Estructura split 50/50 ---------- */
+        .vs-wrap { display: flex; min-height: 100vh; }
+        .vs-hero, .vs-form { flex: 1 1 50%; position: relative; }
+
+        /* ---------- Panel visual (vectores / medicina) ---------- */
+        .vs-hero {
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 3.5rem;
+            color: #fff;
+            background: linear-gradient(135deg, var(--azul-3) 0%, var(--azul) 45%, var(--azul-2) 100%);
+            background-size: 200% 200%;
+            animation: gradientShift 14s ease infinite;
+        }
+        @keyframes gradientShift {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Partículas flotantes */
+        .vs-particles { position: absolute; inset: 0; overflow: hidden; z-index: 0; }
+        .vs-particles span {
+            position: absolute;
+            bottom: -20px;
+            width: 10px; height: 10px;
+            background: var(--cyan);
+            border-radius: 50%;
+            opacity: 0.25;
+            animation: floatUp linear infinite;
+        }
+        @keyframes floatUp {
+            0%   { transform: translateY(0) scale(1);   opacity: 0; }
+            10%  { opacity: 0.35; }
+            90%  { opacity: 0.2; }
+            100% { transform: translateY(-115vh) scale(0.4); opacity: 0; }
+        }
+
+        .vs-hero-content { position: relative; z-index: 2; max-width: 460px;
+            animation: slideInLeft .8s cubic-bezier(.2,.8,.2,1) both; }
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+        .vs-badge {
+            display: inline-flex; align-items: center; gap: .5rem;
+            background: rgba(56,189,248,.15);
+            border: 1px solid rgba(56,189,248,.4);
+            color: var(--cyan);
+            padding: .35rem .85rem; border-radius: 999px;
+            font-size: .78rem; font-weight: 600; letter-spacing: .03em;
+            margin-bottom: 1.5rem;
+        }
+        .vs-hero h1 { font-size: 2.5rem; font-weight: 800; line-height: 1.1; margin: 0 0 1rem; }
+        .vs-hero h1 .hl { color: var(--cyan); }
+        .vs-hero p.lead { color: #cdd9e8; font-size: 1.02rem; margin-bottom: 2rem; }
+
+        /* Escena animada: mosquito + QR scan + pulso ECG */
+        .vs-scene { position: relative; height: 150px; margin-top: .5rem; }
+        .vs-mosquito { position: absolute; left: 0; top: 10px; width: 92px; height: auto;
+            color: var(--cyan); animation: flyMosquito 9s ease-in-out infinite; }
+        @keyframes flyMosquito {
+            0%   { transform: translate(0,0) rotate(-4deg); }
+            25%  { transform: translate(60px,-18px) rotate(3deg); }
+            50%  { transform: translate(130px,6px) rotate(-2deg); }
+            75%  { transform: translate(60px,-10px) rotate(4deg); }
+            100% { transform: translate(0,0) rotate(-4deg); }
+        }
+        .vs-mosquito .wing { transform-origin: 60% 60%; animation: flap .18s ease-in-out infinite alternate; }
+        .vs-mosquito .wing-2 { animation-delay: .09s; }
+        @keyframes flap {
+            from { transform: rotate(-16deg) scaleY(1); }
+            to   { transform: rotate(10deg) scaleY(.82); }
+        }
+
+        /* Mini QR con línea de escaneo (guiño al producto) */
+        .vs-qr {
+            position: absolute; right: 8px; top: 0;
+            width: 108px; height: 108px; padding: 10px;
+            background: rgba(255,255,255,.06);
+            border: 1px solid rgba(56,189,248,.35);
+            border-radius: 14px; overflow: hidden;
+            backdrop-filter: blur(2px);
+        }
+        .vs-qr img, .vs-qr svg { width: 100%; height: 100%; display: block; opacity: .9; }
+        .vs-qr .scanline {
+            position: absolute; left: 10px; right: 10px; top: 10px; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--teal), transparent);
+            box-shadow: 0 0 10px 2px var(--teal);
+            animation: scan 2.4s ease-in-out infinite;
+        }
+        @keyframes scan {
+            0%, 100% { transform: translateY(0); }
+            50%      { transform: translateY(84px); }
+        }
+
+        /* Línea de pulso ECG */
+        .vs-ecg { position: absolute; left: 0; bottom: -6px; width: 100%; height: 42px; color: var(--teal); }
+        .vs-ecg path {
+            fill: none; stroke: currentColor; stroke-width: 2.5;
+            stroke-dasharray: 600; stroke-dashoffset: 600;
+            animation: drawEcg 3.2s linear infinite;
+            filter: drop-shadow(0 0 4px rgba(45,212,191,.6));
+        }
+        @keyframes drawEcg { to { stroke-dashoffset: -600; } }
+
+        .vs-hero-foot { position: relative; z-index: 2; margin-top: 2.5rem; color: #9fb3c8; font-size: .82rem; }
+
+        /* ---------- Panel del formulario ---------- */
+        .vs-form {
+            display: flex; align-items: center; justify-content: center;
+            background: #ffffff; padding: 2.5rem;
+        }
+        .vs-card { width: 100%; max-width: 380px; animation: rise .7s cubic-bezier(.2,.8,.2,1) both; }
+        @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+        .vs-logo {
+            width: 60px; height: 60px; border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, var(--azul) 0%, var(--azul-2) 100%);
+            color: #fff; font-size: 1.8rem; margin: 0 auto 1rem;
+            box-shadow: 0 8px 22px rgba(30,58,95,.35);
+            animation: logoPop .7s cubic-bezier(.2,1.3,.4,1) both; animation-delay: .15s;
+        }
+        @keyframes logoPop { 0% { opacity: 0; transform: scale(.4); } 100% { opacity: 1; transform: scale(1); } }
+        .vs-card h2 { color: var(--azul); font-weight: 800; text-align: center; margin: 0 0 .25rem; }
+        .vs-card .sub { text-align: center; color: #7a8aa0; font-size: .9rem; margin-bottom: 1.75rem; }
+
+        .vs-field { margin-bottom: 1.1rem; }
+        .vs-field label { font-weight: 600; color: var(--azul); font-size: .85rem; margin-bottom: .35rem; display: block; }
+        .vs-input { position: relative; }
+        .vs-input i.lead-ic { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #9aa7b8; }
+        .vs-input input {
+            width: 100%; padding: .75rem 2.6rem .75rem 2.6rem;
+            border: 1.5px solid #e2e8f0; border-radius: 10px;
+            font-size: .98rem; transition: border-color .2s, box-shadow .2s; outline: none;
+        }
+        .vs-input input:focus {
+            border-color: var(--cyan);
+            box-shadow: 0 0 0 4px rgba(56,189,248,.18);
+        }
+        .vs-input .toggle {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; color: #9aa7b8; cursor: pointer; padding: 4px;
+        }
+        .vs-input .toggle:hover { color: var(--azul); }
+
+        .vs-btn {
+            width: 100%; border: none; cursor: pointer;
+            padding: .8rem; border-radius: 10px; margin-top: .4rem;
+            color: #fff; font-weight: 700; font-size: 1rem; letter-spacing: .02em;
+            background: linear-gradient(135deg, var(--azul) 0%, var(--azul-2) 100%);
+            box-shadow: 0 8px 20px rgba(30,58,95,.3);
+            transition: transform .15s, box-shadow .15s, filter .15s;
+        }
+        .vs-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(30,58,95,.4); filter: brightness(1.07); }
+        .vs-btn:active { transform: translateY(0); }
+
+        .vs-foot { text-align: center; color: #94a3b8; font-size: .78rem; margin-top: 1.75rem; line-height: 1.5; }
+        .alert { border-radius: 10px; }
+
+        /* Estados del botón: cargando y éxito */
+        .vs-btn[disabled] { cursor: default; opacity: .95; }
+        .vs-btn.ok { background: linear-gradient(135deg, #0ea5a3 0%, var(--teal) 100%); }
+        .spinner {
+            display: inline-block; width: 16px; height: 16px; vertical-align: -3px;
+            border: 2px solid rgba(255,255,255,.45); border-top-color: #fff;
+            border-radius: 50%; animation: spin .6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Error: sacudir la tarjeta */
+        .vs-card.shake { animation: shake .5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translateX(-2px); }
+            20%, 80% { transform: translateX(4px); }
+            30%, 50%, 70% { transform: translateX(-8px); }
+            40%, 60% { transform: translateX(8px); }
+        }
+
+        /* Éxito: pulso verde alrededor de la tarjeta */
+        .vs-card.success { animation: successPulse .9s ease-out; }
+        @keyframes successPulse {
+            0%   { box-shadow: 0 0 0 0 rgba(45,212,191,.55); }
+            100% { box-shadow: 0 0 0 26px rgba(45,212,191,0); }
+        }
+
+        /* ---------- Responsive ---------- */
+        @media (max-width: 860px) {
+            .vs-wrap { flex-direction: column; }
+            .vs-hero { flex: none; min-height: 340px; padding: 2rem; }
+            .vs-hero h1 { font-size: 1.9rem; }
+            .vs-hero-foot { display: none; }
+            /* La escena (mosquito/QR/pulso) SE MANTIENE visible, solo se achica */
+            .vs-scene { height: 120px; margin-top: 1rem; }
+            .vs-mosquito { width: 74px; }
+            .vs-qr { width: 88px; height: 88px; }
+            .vs-qr .scanline { animation-duration: 2.4s; }
+            @keyframes scan { 0%,100% { transform: translateY(0); } 50% { transform: translateY(64px); } }
+            .vs-form { padding: 2rem 1.25rem; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; }
+        }
     </style>
 </head>
 <body>
-    <div class="login-card bg-white p-5">
-        <div class="text-center mb-4">
-            <h3 class="text-primary fw-bold"><i class="bi bi-shield-check"></i> VectorScan QR</h3>
-            <p class="text-muted small">Plataforma de Vigilancia Epidemiológica</p>
+<div class="vs-wrap">
+
+    <!-- Panel visual -->
+    <section class="vs-hero">
+        <div class="vs-particles" id="particles"></div>
+
+        <div class="vs-hero-content">
+            <span class="vs-badge"><i class="bi bi-qr-code-scan"></i> Vigilancia Epidemiológica</span>
+            <h1>Control de <span class="hl">vectores</span> con trazabilidad por QR</h1>
+            <p class="lead">Registro de viviendas, inspecciones y clasificación de riesgo de dengue para el casco urbano de San Felipe, Retalhuleu.</p>
+
+            <!-- Escena animada -->
+            <div class="vs-scene">
+                <!-- Mosquito (Aedes) -->
+                <svg class="vs-mosquito" viewBox="0 0 120 80" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+                    <!-- alas -->
+                    <ellipse class="wing" cx="55" cy="30" rx="22" ry="9" transform="rotate(-25 55 30)" fill="rgba(56,189,248,.18)"/>
+                    <ellipse class="wing wing-2" cx="70" cy="30" rx="22" ry="9" transform="rotate(-8 70 30)" fill="rgba(56,189,248,.12)"/>
+                    <!-- cuerpo -->
+                    <line x1="58" y1="44" x2="92" y2="60"/>
+                    <circle cx="54" cy="42" r="6" fill="currentColor"/>
+                    <!-- probóscide -->
+                    <line x1="50" y1="44" x2="34" y2="54"/>
+                    <!-- patas -->
+                    <path d="M60 46 L46 66 M66 48 L58 70 M72 50 L72 72 M78 52 L88 70"/>
+                    <!-- antenas -->
+                    <path d="M52 38 L44 28 M56 38 L52 26"/>
+                </svg>
+
+                <!-- Mini QR con escaneo -->
+                <div class="vs-qr">
+                    <div class="scanline"></div>
+                    <svg viewBox="0 0 9 9" shape-rendering="crispEdges" fill="#cfe8fb">
+                        <rect width="9" height="9" fill="transparent"/>
+                        <!-- ojo superior izq -->
+                        <path d="M0 0h3v3h-3z M1 1h1v1h-1z" />
+                        <!-- ojo superior der -->
+                        <path d="M6 0h3v3h-3z M7 1h1v1h-1z" />
+                        <!-- ojo inferior izq -->
+                        <path d="M0 6h3v3h-3z M1 7h1v1h-1z" />
+                        <!-- módulos de datos -->
+                        <path d="M4 0h1v1h-1z M4 2h1v1h-1z M5 4h1v1h-1z M4 5h1v1h-1z M7 4h1v1h-1z M8 5h1v1h-1z M6 6h1v1h-1z M8 7h1v1h-1z M4 8h1v1h-1z M6 8h1v1h-1z M0 4h1v1h-1z M2 4h1v1h-1z"/>
+                    </svg>
+                </div>
+
+                <!-- Pulso ECG -->
+                <svg class="vs-ecg" viewBox="0 0 400 40" preserveAspectRatio="none">
+                    <path d="M0 20 H120 l10 -14 l10 28 l8 -32 l10 32 l8 -14 H400"/>
+                </svg>
+            </div>
         </div>
-        {% if messages %}
-        {% for msg in messages %}
-        <div class="alert alert-{{ msg.tags }} py-2 small">{{ msg }}</div>
-        {% endfor %}
-        {% endif %}
-        <form method="post">
-            {% csrf_token %}
-            <div class="mb-3">
-                <label class="form-label fw-semibold">Usuario</label>
-                <input type="text" name="username" class="form-control" required autofocus>
+
+        <div class="vs-hero-foot">
+            <i class="bi bi-hospital"></i> Centro de Salud — San Felipe, Retalhuleu
+        </div>
+    </section>
+
+    <!-- Panel del formulario -->
+    <section class="vs-form">
+        <div class="vs-card">
+            <div class="vs-logo"><i class="bi bi-shield-check"></i></div>
+            <h2>VectorScan QR</h2>
+            <p class="sub">Ingresá tus credenciales para continuar</p>
+
+            <div id="vs-messages">
+                {% for msg in messages %}
+                    {% if 'error' in msg.tags %}
+                    <div class="alert alert-danger py-2 small d-flex align-items-center gap-2"><i class="bi bi-exclamation-triangle"></i> <span>{{ msg }}</span></div>
+                    {% elif 'success' in msg.tags %}
+                    <div class="alert alert-success py-2 small d-flex align-items-center gap-2"><i class="bi bi-check-circle"></i> <span>{{ msg }}</span></div>
+                    {% elif 'warning' in msg.tags %}
+                    <div class="alert alert-warning py-2 small d-flex align-items-center gap-2"><i class="bi bi-exclamation-circle"></i> <span>{{ msg }}</span></div>
+                    {% else %}
+                    <div class="alert alert-info py-2 small d-flex align-items-center gap-2"><i class="bi bi-info-circle"></i> <span>{{ msg }}</span></div>
+                    {% endif %}
+                {% endfor %}
             </div>
-            <div class="mb-3">
-                <label class="form-label fw-semibold">Contraseña</label>
-                <input type="password" name="password" class="form-control" required>
-            </div>
-            <button type="submit" class="btn btn-primary w-100 fw-semibold py-2">Ingresar</button>
-        </form>
-        <p class="text-center text-muted small mt-4 mb-0">Centro de Salud — San Felipe, Retalhuleu<br>© 2026</p>
-    </div>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="vs-field">
+                    <label for="id_username">Usuario</label>
+                    <div class="vs-input">
+                        <i class="bi bi-person lead-ic"></i>
+                        <input id="id_username" type="text" name="username" required autofocus
+                               autocomplete="username" placeholder="Tu usuario">
+                    </div>
+                </div>
+                <div class="vs-field">
+                    <label for="id_password">Contraseña</label>
+                    <div class="vs-input">
+                        <i class="bi bi-lock lead-ic"></i>
+                        <input id="id_password" type="password" name="password" required
+                               autocomplete="current-password" placeholder="Tu contraseña">
+                        <button type="button" class="toggle" id="togglePass" aria-label="Mostrar contraseña">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="vs-btn">
+                    <i class="bi bi-box-arrow-in-right"></i> Ingresar
+                </button>
+            </form>
+
+            <p class="vs-foot">
+                Plataforma de vigilancia de enfermedades transmitidas por vectores<br>
+                © 2026 · Centro de Salud de San Felipe
+            </p>
+        </div>
+    </section>
+</div>
+
+<script>
+    // Partículas flotantes generadas en JS para variar tamaño/velocidad
+    (function () {
+        var cont = document.getElementById('particles');
+        if (!cont || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        for (var i = 0; i < 22; i++) {
+            var s = document.createElement('span');
+            var size = 4 + Math.random() * 12;
+            s.style.left = Math.random() * 100 + '%';
+            s.style.width = s.style.height = size + 'px';
+            s.style.animationDuration = (7 + Math.random() * 9) + 's';
+            s.style.animationDelay = (Math.random() * 8) + 's';
+            s.style.opacity = (0.1 + Math.random() * 0.3).toFixed(2);
+            cont.appendChild(s);
+        }
+    })();
+
+    // Mostrar / ocultar contraseña
+    (function () {
+        var btn = document.getElementById('togglePass');
+        var inp = document.getElementById('id_password');
+        if (!btn || !inp) return;
+        btn.addEventListener('click', function () {
+            var show = inp.type === 'password';
+            inp.type = show ? 'text' : 'password';
+            btn.querySelector('i').className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
+        });
+    })();
+
+    // Envío con animación de éxito / error (sin recargar). Si no hay fetch,
+    // el formulario se envía de forma normal (degradación elegante).
+    (function () {
+        var form = document.querySelector('form');
+        var card = document.querySelector('.vs-card');
+        var btn  = document.querySelector('.vs-btn');
+        var box  = document.getElementById('vs-messages');
+        if (!form || !card || !btn || !window.fetch || !window.FormData) return;
+        var btnHTML = btn.innerHTML;
+
+        function shake() {
+            card.classList.remove('shake');
+            void card.offsetWidth;        // reinicia la animación
+            card.classList.add('shake');
+        }
+        function mostrarError(txt) {
+            box.innerHTML = '<div class="alert alert-danger py-2 small d-flex align-items-center gap-2">' +
+                            '<i class="bi bi-exclamation-triangle"></i> <span></span></div>';
+            box.querySelector('span').textContent = txt;
+            btn.disabled = false; btn.classList.remove('ok'); btn.innerHTML = btnHTML;
+            shake();
+        }
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            box.innerHTML = '';
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Ingresando...';
+
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            }).then(function (resp) {
+                if (resp.redirected) {                 // login correcto -> hubo redirección
+                    btn.classList.add('ok');
+                    btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> ¡Bienvenido!';
+                    card.classList.add('success');
+                    setTimeout(function () { window.location.href = resp.url; }, 900);
+                    return;
+                }
+                return resp.text().then(function (html) {  // credenciales incorrectas
+                    var doc = new DOMParser().parseFromString(html, 'text/html');
+                    var al = doc.querySelector('#vs-messages .alert');
+                    mostrarError(al ? al.textContent.trim()
+                                    : 'Credenciales incorrectas o usuario inactivo.');
+                });
+            }).catch(function () {
+                mostrarError('No se pudo conectar con el servidor. Intentá de nuevo.');
+            });
+        });
+
+        // Si la página llega ya con un error (p. ej. sin JS en el envío previo),
+        // sacudir la tarjeta al cargar.
+        if (box.querySelector('.alert-danger')) shake();
+    })();
+</script>
 </body>
 </html>
