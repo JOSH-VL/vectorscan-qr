@@ -11,7 +11,7 @@ en la IP de tu máquina en la red local (ej. `http://192.168.x.x:8000`), no `loc
 |---|---|---|---|---|
 | 1 | Login | — (deslogueado) | `/usuarios/login/` | Pantalla de inicio de sesión. |
 | 2 | Panel de usuarios | `admin` | `/usuarios/` | Lista los 4 activos (el inactivo no sale: eso es el soft-delete). |
-| 3 | Crear usuario | `admin` | `/usuarios/crear/` | Formulario de alta con selección de rol. |
+| 3 | Crear usuariotambi | `admin` | `/usuarios/crear/` | Formulario de alta con selección de rol. |
 | 4 | Viviendas con filtros | `oficinista` | `/viviendas/` | Usá la búsqueda y el filtro de zona/estado. |
 | 5 | Detalle de vivienda con QR | `oficinista` | `/viviendas/<id>/` | Tomá una de **La Llovizna** o **El Campo**. |
 | 6 | Vista de impresión del QR | `oficinista` | `/viviendas/<id>/qr/imprimir/` | Mismo `<id>` de la figura 5. |
