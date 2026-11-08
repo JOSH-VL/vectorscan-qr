@@ -11,4 +11,6 @@ urlpatterns = [
     path('productividad/', views.reporte_productividad, name='productividad'),
     path('exportar/excel/', views.exportar_excel, name='exportar_excel'),
     path('exportar/csv/', views.exportar_csv, name='exportar_csv'),
+    path('exportar/formulario-a1/', views.exportar_formulario_a1, name='exportar_a1'),
+    path('exportar/consolidado/', views.exportar_consolidado, name='exportar_consolidado'),
 ]

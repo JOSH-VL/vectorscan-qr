@@ -68,3 +68,36 @@ class IndicesPorZonaTest(SimpleTestCase):
         self.assertEqual(filas[1]['casas_insp'], 0)
         self.assertIsNone(filas[1]['estrato'])
         self.assertEqual(total['casas_insp'], 2)
+
+
+def _insp_completa(vivienda_id, zona, clase, larvas=False, num=4, pos=0, hab=5,
+                   educo=True, larvicida=False, elimino=False):
+    return SimpleNamespace(
+        vivienda_id=vivienda_id, clase_trabajo=clase,
+        vivienda=SimpleNamespace(zona=zona, num_habitantes=hab),
+        presencia_larvas=larvas, num_depositos=num, depositos_positivos=pos,
+        educo_residente=educo, aplico_larvicida=larvicida, elimino_criaderos=elimino)
+
+
+class FilasConsolidadoTest(SimpleTestCase):
+
+    def test_agrupa_por_localidad_y_clase(self):
+        from .exportaciones import filas_consolidado
+        inspecciones = [  # de la más reciente a la más antigua
+            _insp_completa(1, 'Barrio El Centro', 'ENC', larvas=True, pos=2, larvicida=True),
+            _insp_completa(1, 'Barrio El Centro', 'ENC'),            # anterior: se ignora
+            _insp_completa(1, 'Barrio El Centro', 'VERIF', hab=5),   # otra clase: cuenta
+            _insp_completa(2, 'Barrio El Centro', 'ENC', hab=3, educo=False, elimino=True),
+            _insp_completa(3, 'Barrio El Campo', 'FUM', num=0),
+        ]
+        filas = {(f['localidad'], f['clase']): f for f in filas_consolidado(inspecciones)}
+        self.assertEqual(len(filas), 3)
+
+        enc = filas[('Barrio El Centro', 'ENC')]
+        self.assertEqual((enc['viv_insp'], enc['viv_pos']), (2, 1))
+        self.assertEqual(enc['personas'], 5)          # la casa 2 no fue orientada
+        self.assertEqual((enc['abatizadas'], enc['deschatarrizadas']), (1, 1))
+        self.assertEqual((enc['dep_insp'], enc['dep_pos']), (8, 2))
+
+        self.assertEqual(filas[('Barrio El Centro', 'VERIF')]['viv_insp'], 1)
+        self.assertEqual(filas[('Barrio El Campo', 'FUM')]['fumigadas'], 1)

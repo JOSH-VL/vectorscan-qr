@@ -16,7 +16,9 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from apps.viviendas.models import Vivienda
 from apps.inspecciones.models import Inspeccion
 from apps.usuarios.models import Usuario
-from .indices import indices_por_zona, ESTRATOS_INDICE_CASAS, CORTES_CONFIRMADOS
+from .indices import (indices_por_zona, ESTRATOS_INDICE_CASAS, CORTES_CONFIRMADOS,
+                      CLASES_TRABAJO_INDICES)
+from .exportaciones import libro_formulario_a1, libro_consolidado, filas_consolidado
 
 
 def _get_filtros(request):
@@ -126,43 +128,102 @@ def reporte_riesgo(request):
     return render(request, 'reportes/riesgo.html', {'data_zonas': data_zonas})
 
 
+def _meses_y_mes_sel(request):
+    """Meses con inspecciones activas (desc) y el mes elegido en ?mes=YYYY-MM
+    (por defecto, el más reciente)."""
+    meses = [
+        m.date() if hasattr(m, 'date') else m
+        for m in Inspeccion.objects.filter(estado='Activo')
+        .annotate(m=TruncMonth('fecha_inspeccion'))
+        .values_list('m', flat=True).distinct().order_by('-m')
+    ]
+    mes_sel = None
+    try:
+        mes_sel = datetime.strptime(request.GET.get('mes', ''), '%Y-%m').date()
+    except ValueError:
+        pass
+    if mes_sel is None and meses:
+        mes_sel = meses[0]
+    return meses, mes_sel
+
+
+def _clases_sel(request):
+    """Clases de trabajo de ?clase=...; sin selección válida → las de MSPAS."""
+    validas = dict(Inspeccion.CLASE_TRABAJO)
+    clases = [c for c in request.GET.getlist('clase') if c in validas]
+    return clases or list(CLASES_TRABAJO_INDICES)
+
+
+def _zonas_activas():
+    return list(
+        Vivienda.objects.filter(estado='Activo').exclude(zona='')
+        .values_list('zona', flat=True).distinct().order_by('zona')
+    )
+
+
+def _inspecciones_del_mes(mes, clases=None):
+    """Inspecciones activas del mes, de viviendas activas, con vivienda cargada."""
+    if mes is None:
+        return Inspeccion.objects.none()
+    qs = Inspeccion.objects.filter(
+        estado='Activo', vivienda__estado='Activo',
+        fecha_inspeccion__year=mes.year, fecha_inspeccion__month=mes.month,
+    ).select_related('vivienda')
+    if clases is not None:
+        qs = qs.filter(clase_trabajo__in=clases)
+    return qs
+
+
+def _respuesta_excel(wb, nombre):
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="{nombre}"'
+    wb.save(response)
+    return response
+
+
+@login_required
+def exportar_formulario_a1(request):
+    """Formulario A-1 (hoja ENC1): una hoja por localidad, una fila por inspección."""
+    _, mes = _meses_y_mes_sel(request)
+    clases = _clases_sel(request)
+    zona = request.GET.get('zona', '')
+    zonas = [zona] if zona else _zonas_activas()
+
+    qs = (_inspecciones_del_mes(mes, clases)
+          .prefetch_related('depositos').order_by('fecha_inspeccion', 'pk'))
+    por_zona = {z: [] for z in zonas}
+    for insp in qs:
+        if insp.vivienda.zona in por_zona:
+            por_zona[insp.vivienda.zona].append(insp)
+
+    if mes is None:
+        mes = timezone.localdate().replace(day=1)
+    wb = libro_formulario_a1(por_zona, mes, clases)
+    return _respuesta_excel(wb, f'Formulario_A1_{mes:%Y-%m}.xlsx')
+
+
+@login_required
+def exportar_consolidado(request):
+    """Consolidado mensual de Vigilancia y Control del Dengue (todas las clases)."""
+    _, mes = _meses_y_mes_sel(request)
+    filas = filas_consolidado(_inspecciones_del_mes(mes).order_by('-fecha_inspeccion'))
+    if mes is None:
+        mes = timezone.localdate().replace(day=1)
+    wb = libro_consolidado(filas, mes)
+    return _respuesta_excel(wb, f'Consolidado_Dengue_{mes:%Y-%m}.xlsx')
+
+
 @login_required
 def reporte_indices(request):
     """
     Índices entomológicos (I.C., I.B., I.R.) por zona para un mes.
     Agregado por ZONA; no usa ni modifica el riesgo por vivienda.
     """
-    activas = Inspeccion.objects.filter(estado='Activo')
-    meses = [
-        m.date() if hasattr(m, 'date') else m
-        for m in activas.annotate(m=TruncMonth('fecha_inspeccion'))
-        .values_list('m', flat=True).distinct().order_by('-m')
-    ]
-
-    # Mes elegido (YYYY-MM); por defecto el más reciente con inspecciones.
-    mes_sel = None
-    mes_param = request.GET.get('mes', '')
-    if mes_param:
-        try:
-            mes_sel = datetime.strptime(mes_param, '%Y-%m').date()
-        except ValueError:
-            mes_sel = None
-    if mes_sel is None and meses:
-        mes_sel = meses[0]
-
-    zonas = list(
-        Vivienda.objects.filter(estado='Activo').exclude(zona='')
-        .values_list('zona', flat=True).distinct().order_by('zona')
-    )
-    inspecciones = []
-    if mes_sel:
-        inspecciones = (
-            activas.filter(fecha_inspeccion__year=mes_sel.year,
-                           fecha_inspeccion__month=mes_sel.month,
-                           vivienda__estado='Activo')
-            .select_related('vivienda').order_by('-fecha_inspeccion')
-        )
-    filas, total = indices_por_zona(inspecciones, zonas)
+    meses, mes_sel = _meses_y_mes_sel(request)
+    clases_sel = _clases_sel(request)
+    inspecciones = _inspecciones_del_mes(mes_sel, clases_sel).order_by('-fecha_inspeccion')
+    filas, total = indices_por_zona(inspecciones, _zonas_activas())
 
     cortes = [
         {'estrato': e, 'color': c, 'desde': lim,
@@ -177,6 +238,10 @@ def reporte_indices(request):
         'mes_sel': mes_sel,
         'cortes': cortes,
         'cortes_confirmados': CORTES_CONFIRMADOS,
+        'clases': Inspeccion.CLASE_TRABAJO,
+        'clases_sel': clases_sel,
+        'clases_por_defecto': sorted(clases_sel) == sorted(CLASES_TRABAJO_INDICES),
+        'zonas': _zonas_activas(),
     })
 
 

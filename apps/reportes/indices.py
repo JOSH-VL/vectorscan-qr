@@ -38,6 +38,14 @@ ESTRATOS_INDICE_CASAS = [
 ]
 CORTES_CONFIRMADOS = False
 
+# --------------------------------------------------------------------------- #
+# Clases de trabajo que entran al cálculo de índices por defecto.
+# Según MSPAS, los índices entomológicos salen de encuestas (ENC) y
+# verificaciones (VERIF); acción, plan, tratamiento y fumigación no cuentan.
+# El reporte permite cambiar la selección; esto es solo el valor por defecto.
+# --------------------------------------------------------------------------- #
+CLASES_TRABAJO_INDICES = ('ENC', 'VERIF')
+
 
 def _pct(numerador, denominador):
     """Porcentaje con 1 decimal; None si el denominador es 0."""

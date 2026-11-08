@@ -19,9 +19,23 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-8 small text-muted">
+            <div class="col-md-8">
+                <label class="form-label small fw-semibold d-block">Clases de trabajo que cuentan</label>
+                {% for valor, nombre in clases %}
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="clase" value="{{ valor }}"
+                           id="clase-{{ valor }}" {% if valor in clases_sel %}checked{% endif %}>
+                    <label class="form-check-label small" for="clase-{{ valor }}">{{ nombre }}</label>
+                </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-sm btn-primary ms-1"><i class="bi bi-funnel"></i> Aplicar</button>
+            </div>
+            <div class="col-12 small text-muted">
                 Indicadores <strong>agregados por zona</strong>. Son distintos del riesgo por vivienda
                 (Alto/Medio/Bajo), que se calcula en cada inspección.
+                {% if clases_por_defecto %}Por defecto cuentan encuestas y verificaciones (criterio MSPAS).
+                {% else %}<span class="text-warning-emphasis"><i class="bi bi-exclamation-triangle"></i>
+                Selección distinta de la de MSPAS (encuesta + verificación).</span>{% endif %}
             </div>
         </form>
     </div>
@@ -98,6 +112,41 @@
         </div>
     </div>
 </div>
+
+{% if mes_sel %}
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white">
+        <h6 class="mb-0"><i class="bi bi-file-earmark-spreadsheet"></i> Formatos oficiales MSPAS — {{ mes_sel|date:'F Y'|capfirst }}</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <input type="hidden" name="mes" value="{{ mes_sel|date:'Y-m' }}">
+            {% for c in clases_sel %}<input type="hidden" name="clase" value="{{ c }}">{% endfor %}
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold">Localidad (Formulario A-1)</label>
+                <select name="zona" class="form-select">
+                    <option value="">Todas (una hoja por localidad)</option>
+                    {% for z in zonas %}<option value="{{ z }}">{{ z }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" formaction="{% url 'reportes:exportar_a1' %}" class="btn btn-success w-100">
+                    <i class="bi bi-file-earmark-excel"></i> Formulario A-1
+                </button>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" formaction="{% url 'reportes:exportar_consolidado' %}" class="btn btn-outline-success w-100">
+                    <i class="bi bi-file-earmark-excel"></i> Consolidado mensual
+                </button>
+            </div>
+            <div class="col-12 small text-muted">
+                El A-1 usa las clases de trabajo marcadas arriba. El consolidado incluye todas las clases,
+                con una fila por localidad y clase. Cada archivo trae una hoja de notas que dice de dónde sale cada columna.
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
 
 <div class="row g-3">
     <div class="col-lg-7">
