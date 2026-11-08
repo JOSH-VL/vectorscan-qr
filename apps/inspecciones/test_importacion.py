@@ -2,19 +2,24 @@
 Pruebas de importar_formatos con Excel FICTICIOS (apps/inspecciones/importacion/prueba.py).
 No usan datos reales. Corren contra la base de pruebas de Django.
 """
+import datetime
 import io
+import os
 import shutil
 import tempfile
 from pathlib import Path
+from unittest import mock
 
 from django.conf import settings
 from django.core.management import CommandError, call_command
+from django.db import IntegrityError, transaction
 from django.test import SimpleTestCase, TestCase, override_settings
 from openpyxl import load_workbook
 
 from apps.inspecciones.importacion import prueba
 from apps.inspecciones.importacion.comun import barrio_canonico, clase_trabajo, entero, ErrorCelda
 from apps.inspecciones.importacion.lectores import leer_a1, leer_consolidado, leer_encuestas
+from apps.inspecciones.models import ConsolidadoMensual, EncuestaEntomologica, Inspeccion
 from apps.usuarios.models import Usuario
 from apps.viviendas.models import Vivienda
 
@@ -125,7 +130,7 @@ class ComandoTest(_ConArchivos, TestCase):
     def correr(self, nombre, tipo, *extra):
         salida = io.StringIO()
         args = ['--archivo', self.rutas[nombre], '--tipo', tipo, *extra]
-        if tipo == 'a1' and '--usuario' not in extra:
+        if '--usuario' not in extra:
             args += ['--usuario', 'tecnico_real']
         call_command('importar_formatos', *args, stdout=salida)
         return salida.getvalue()
@@ -163,13 +168,25 @@ class ComandoTest(_ConArchivos, TestCase):
         shutil.copy(self.rutas['prueba_consolidado_2026.xlsx'], ruta)
         with self.assertRaisesMessage(CommandError, 'nombre del archivo'):
             call_command('importar_formatos', '--archivo', str(ruta), '--tipo',
-                         'consolidado', '--dry-run', stdout=io.StringIO())
+                         'consolidado', '--usuario', 'tecnico_real', '--dry-run',
+                         stdout=io.StringIO())
 
     def test_rechaza_archivo_dentro_del_repo(self):
         with tempfile.NamedTemporaryFile(dir=settings.BASE_DIR, suffix='.xlsx') as tmp:
             with self.assertRaisesMessage(CommandError, 'dentro del repositorio'):
                 call_command('importar_formatos', '--archivo', tmp.name, '--tipo',
-                             'consolidado', '--dry-run', stdout=io.StringIO())
+                             'consolidado', '--usuario', 'tecnico_real', '--dry-run',
+                             stdout=io.StringIO())
+
+    def test_usuario_obligatorio_en_todos_los_tipos(self):
+        with self.assertRaisesMessage(CommandError, '--usuario'):
+            call_command('importar_formatos', '--archivo', self.rutas['prueba_encuestas_2026.xlsx'],
+                         '--tipo', 'encuestas', '--dry-run', stdout=io.StringIO())
+
+    def test_sin_dry_run_no_escribe_todavia(self):
+        with self.assertRaisesMessage(CommandError, 'Excel real anonimizado'):
+            self.correr('prueba_A1_ENC.xlsx', 'a1')
+        self.assertEqual(Vivienda.objects.count(), 0)
 
     def test_rechaza_xls(self):
         ruta = Path(self.dir) / 'viejo.xls'
@@ -197,3 +214,124 @@ class ComandoTest(_ConArchivos, TestCase):
     def test_consolidado_deduce_anio_del_nombre(self):
         salida = self.correr('prueba_consolidado_2026.xlsx', 'consolidado', '--dry-run')
         self.assertIn('Filas válidas: 4', salida)
+
+
+# --------------------------------------------------------------------------- #
+# Modelos de datos importados
+# --------------------------------------------------------------------------- #
+class ModelosImportadosTest(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.u = Usuario.objects.create_user(username='oficinista_real', password='x')
+
+    def _encuesta(self, **kw):
+        datos = dict(localidad='Barrio El Centro', fecha=datetime.date(2026, 9, 14),
+                     clase_trabajo='ENC', casas_inspeccionadas=40, casas_positivas=4,
+                     recipientes_inspeccionados=160, recipientes_positivos=6,
+                     importado_por=self.u)
+        datos.update(kw)
+        return EncuestaEntomologica.objects.create(**datos)
+
+    def _consolidado(self, **kw):
+        datos = dict(localidad='Barrio El Centro', anio=2026, mes=9, clase_trabajo='ENC',
+                     viviendas_inspeccionadas=40, viviendas_positivas=4, importado_por=self.u)
+        datos.update(kw)
+        return ConsolidadoMensual.objects.create(**datos)
+
+    def test_encuesta_unica_por_localidad_fecha_clase(self):
+        self._encuesta()
+        self._encuesta(clase_trabajo='VERIF')  # otra clase: permitido
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self._encuesta()
+
+    def test_encuesta_positivos_no_mayor(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self._encuesta(casas_positivas=41)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self._encuesta(recipientes_positivos=161)
+
+    def test_consolidado_restricciones(self):
+        self._consolidado()
+        self._consolidado(viviendas_positivas=None, mes=10)  # NULL = no reportado
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self._consolidado()                                # repetido
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self._consolidado(mes=13)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self._consolidado(mes=11, viviendas_positivas=50)
+
+    def test_clave_importacion_unica_y_opcional(self):
+        media = tempfile.mkdtemp()
+        try:
+            with override_settings(MEDIA_ROOT=media):
+                v = Vivienda.objects.create(direccion='x', responsable_familia='x', registrado_por=self.u)
+            Inspeccion.objects.create(vivienda=v, usuario=self.u)   # NULL
+            Inspeccion.objects.create(vivienda=v, usuario=self.u)   # varios NULL permitidos
+            Inspeccion.objects.create(vivienda=v, usuario=self.u, clave_importacion='A1|x|2026-10-05|ENC|1')
+            with self.assertRaises(IntegrityError), transaction.atomic():
+                Inspeccion.objects.create(vivienda=v, usuario=self.u, clave_importacion='A1|x|2026-10-05|ENC|1')
+        finally:
+            shutil.rmtree(media, ignore_errors=True)
+
+
+# --------------------------------------------------------------------------- #
+# limpiar_demo
+# --------------------------------------------------------------------------- #
+class LimpiarDemoTest(TestCase):
+
+    def setUp(self):
+        self.media = tempfile.mkdtemp()
+        self.ctx = override_settings(MEDIA_ROOT=self.media)
+        self.ctx.enable()
+        self.u = Usuario.objects.create_user(username='tecnico_x', password='x')
+        self.v_demo = Vivienda.objects.create(direccion='d', responsable_familia='d',
+                                              registrado_por=self.u, es_demo=True)
+        self.v_real = Vivienda.objects.create(direccion='r', responsable_familia='r',
+                                              registrado_por=self.u)
+        self.i_demo = Inspeccion.objects.create(vivienda=self.v_demo, usuario=self.u, es_demo=True)
+        self.i_real = Inspeccion.objects.create(vivienda=self.v_real, usuario=self.u)
+
+    def tearDown(self):
+        self.ctx.disable()
+        shutil.rmtree(self.media, ignore_errors=True)
+
+    def test_borra_solo_demo_con_confirmar(self):
+        png = self.v_demo.imagen_qr.path
+        self.assertTrue(os.path.isfile(png))
+        call_command('limpiar_demo', '--confirmar', stdout=io.StringIO())
+        self.assertFalse(Vivienda.objects.filter(es_demo=True).exists())
+        self.assertFalse(Inspeccion.objects.filter(es_demo=True).exists())
+        self.assertTrue(Vivienda.objects.filter(pk=self.v_real.pk).exists())
+        self.assertTrue(Inspeccion.objects.filter(pk=self.i_real.pk).exists())
+        self.assertTrue(Usuario.objects.filter(pk=self.u.pk).exists())
+        self.assertFalse(os.path.isfile(png))
+
+    def test_sin_la_palabra_no_borra(self):
+        with mock.patch('builtins.input', return_value='si'):
+            salida = io.StringIO()
+            call_command('limpiar_demo', stdout=salida)
+        self.assertIn('Cancelado', salida.getvalue())
+        self.assertEqual(Vivienda.objects.filter(es_demo=True).count(), 1)
+
+    def test_con_la_palabra_borra(self):
+        with mock.patch('builtins.input', return_value='BORRAR'):
+            call_command('limpiar_demo', stdout=io.StringIO())
+        self.assertEqual(Vivienda.objects.filter(es_demo=True).count(), 0)
+
+    def test_aborta_si_hay_inspeccion_real_en_vivienda_demo(self):
+        Inspeccion.objects.create(vivienda=self.v_demo, usuario=self.u)  # real
+        with self.assertRaisesMessage(CommandError, 'REAL'):
+            call_command('limpiar_demo', '--confirmar', stdout=io.StringIO())
+        self.assertEqual(Vivienda.objects.filter(es_demo=True).count(), 1)
+        self.assertEqual(Inspeccion.objects.filter(es_demo=True).count(), 1)
+
+    def test_despues_de_limpiar_el_candado_demo_se_libera(self):
+        call_command('limpiar_demo', '--confirmar', stdout=io.StringIO())
+        with tempfile.TemporaryDirectory() as d:
+            rutas = prueba.generar_todo(d)
+            with override_settings(DEBUG=False):
+                salida = io.StringIO()
+                call_command('importar_formatos', '--archivo', rutas['prueba_A1_ENC.xlsx'],
+                             '--tipo', 'a1', '--usuario', 'tecnico_x', '--dry-run', stdout=salida)
+        self.assertIn('Filas válidas: 6', salida.getvalue())

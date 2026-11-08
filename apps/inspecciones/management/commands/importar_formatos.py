@@ -2,7 +2,7 @@
 importar_formatos — carga de datos REALES de vigilancia entomológica (MSPAS).
 
     python manage.py importar_formatos --archivo /ruta/fuera/del/repo.xlsx \
-        --tipo a1|encuestas|consolidado [--usuario USERNAME] [--clase ENC]
+        --tipo a1|encuestas|consolidado --usuario USERNAME [--clase ENC]
         [--anio 2026] [--dry-run]
 
 Candados (en este orden; cualquiera aborta sin escribir nada):
@@ -51,8 +51,8 @@ class Command(BaseCommand):
         parser.add_argument('--archivo', required=True,
                             help='Ruta al .xlsx, fuera del repositorio.')
         parser.add_argument('--tipo', required=True, choices=sorted(TIPOS))
-        parser.add_argument('--usuario',
-                            help='Usuario activo responsable de las inspecciones (obligatorio para a1).')
+        parser.add_argument('--usuario', required=True,
+                            help='Usuario activo responsable de lo importado.')
         parser.add_argument('--clase', default='ENC',
                             choices=[c for c, _ in Inspeccion.CLASE_TRABAJO],
                             help='Clase de trabajo si el archivo no la indica (por defecto ENC).')
@@ -66,7 +66,7 @@ class Command(BaseCommand):
         self._candado_entorno()
         self._candado_demo()
         ruta = self._candado_ruta(opts['archivo'])
-        usuario = self._usuario(opts) if opts['tipo'] == 'a1' else None
+        usuario = self._usuario(opts)
 
         try:
             libro = load_workbook(ruta, read_only=True, data_only=True)
@@ -133,7 +133,8 @@ class Command(BaseCommand):
 
     def _usuario(self, opts):
         if not opts['usuario']:
-            raise CommandError('--usuario es obligatorio para --tipo a1 (técnico responsable).')
+            raise CommandError(
+                '--usuario es obligatorio: queda registrado como responsable de lo importado.')
         u = Usuario.objects.filter(username=opts['usuario'], estado='Activo', is_active=True).first()
         if u is None:
             raise CommandError(f'No existe un usuario activo "{opts["usuario"]}". Abortado.')
@@ -179,9 +180,10 @@ class Command(BaseCommand):
     # Escritura
     # ------------------------------------------------------------------ #
     def _escribir(self, lectura, opts, usuario):
-        # PENDIENTE DE AUTORIZACIÓN: guardar requiere cambios de modelo
-        # (clave de importación en Inspeccion y tablas para encuestas y
-        # consolidado). Hasta que se aprueben y se migren, solo --dry-run.
+        # BLOQUEADO A PROPÓSITO: los modelos ya existen (clave_importacion,
+        # EncuestaEntomologica, ConsolidadoMensual), pero la escritura se activa
+        # solo después de confirmar la estructura de lectura contra un Excel
+        # real anonimizado. Hasta entonces, solo --dry-run.
         raise CommandError(
-            'La escritura todavía no está habilitada (pendiente de los cambios de '
-            'modelo). Usá --dry-run para validar el archivo.')
+            'La escritura todavía no está habilitada: falta confirmar las columnas '
+            'contra un Excel real anonimizado. Usá --dry-run para validar el archivo.')

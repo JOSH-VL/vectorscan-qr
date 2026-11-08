@@ -1,5 +1,22 @@
 from django.contrib import admin
-from .models import Inspeccion, InspeccionHistorico, DepositoInspeccion
+from .models import (Inspeccion, InspeccionHistorico, DepositoInspeccion,
+                     EncuestaEntomologica, ConsolidadoMensual)
+
+
+@admin.register(EncuestaEntomologica)
+class EncuestaEntomologicaAdmin(admin.ModelAdmin):
+    list_display = ('localidad', 'fecha', 'clase_trabajo', 'casas_inspeccionadas',
+                    'casas_positivas', 'recipientes_inspeccionados', 'recipientes_positivos', 'estado')
+    list_filter = ('localidad', 'clase_trabajo', 'estado')
+    readonly_fields = ('importado_por', 'fecha_importacion')
+
+
+@admin.register(ConsolidadoMensual)
+class ConsolidadoMensualAdmin(admin.ModelAdmin):
+    list_display = ('localidad', 'anio', 'mes', 'clase_trabajo', 'viviendas_inspeccionadas',
+                    'viviendas_positivas', 'depositos_inspeccionados', 'depositos_positivos', 'estado')
+    list_filter = ('anio', 'mes', 'localidad', 'clase_trabajo', 'estado')
+    readonly_fields = ('importado_por', 'fecha_importacion')
 
 
 class DepositoInspeccionInline(admin.TabularInline):

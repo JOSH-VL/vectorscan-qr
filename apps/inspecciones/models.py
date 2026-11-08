@@ -89,6 +89,12 @@ class Inspeccion(models.Model):
     # (vistas, importar_formatos) quedan siempre en False.
     es_demo = models.BooleanField(default=False, editable=False,
                                   verbose_name='Dato de demostración')
+    # Idempotencia de importar_formatos: 'A1|<localidad>|<fecha>|<clase>|<No. Orden>'.
+    # NULL en las inspecciones registradas desde el sistema.
+    clave_importacion = models.CharField(
+        max_length=150, unique=True, null=True, blank=True, editable=False,
+        verbose_name='Clave de importación'
+    )
 
     class Meta:
         verbose_name = 'Inspección'
@@ -246,3 +252,96 @@ class InspeccionHistorico(models.Model):
 
     def __str__(self):
         return f"{self.vivienda_codigo} — {self.tipo_operacion} ({self.fecha_cambio})"
+
+
+# --------------------------------------------------------------------------- #
+# Datos agregados importados de los formatos MSPAS (importar_formatos).
+# Son de solo lectura: no se editan desde vistas, así que no llevan tabla
+# histórica; la trazabilidad es importado_por + fecha_importacion. Siguen la
+# convención de borrado lógico con `estado`.
+# --------------------------------------------------------------------------- #
+ESTADO_CHOICES = [('Activo', 'Activo'), ('Inactivo', 'Inactivo')]
+
+
+def _no_mayor(campo, tope, nombre):
+    """CheckConstraint: campo <= tope, permitiendo NULL en cualquiera."""
+    return models.CheckConstraint(
+        condition=(models.Q(**{f'{campo}__isnull': True})
+                   | models.Q(**{f'{tope}__isnull': True})
+                   | models.Q(**{f'{campo}__lte': models.F(tope)})),
+        name=nombre,
+    )
+
+
+class EncuestaEntomologica(models.Model):
+    """Fila de la hoja 'ENCUESTAS Y VERIFICACIONES' (por localidad y fecha)."""
+
+    localidad = models.CharField(max_length=50, verbose_name='Localidad')
+    fecha = models.DateField(verbose_name='Fecha')
+    clase_trabajo = models.CharField(max_length=15, choices=Inspeccion.CLASE_TRABAJO,
+                                     verbose_name='Clase de trabajo')
+    casas_inspeccionadas = models.PositiveIntegerField(verbose_name='Casas inspeccionadas')
+    casas_positivas = models.PositiveIntegerField(verbose_name='Casas positivas')
+    recipientes_inspeccionados = models.PositiveIntegerField(verbose_name='Recipientes inspeccionados')
+    recipientes_positivos = models.PositiveIntegerField(verbose_name='Recipientes positivos')
+    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='Activo')
+    importado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='encuestas_importadas', verbose_name='Importado por')
+    fecha_importacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Encuesta entomológica (importada)'
+        verbose_name_plural = 'Encuestas entomológicas (importadas)'
+        ordering = ['-fecha', 'localidad']
+        constraints = [
+            models.UniqueConstraint(fields=['localidad', 'fecha', 'clase_trabajo'],
+                                    name='encuesta_unica_localidad_fecha_clase'),
+            _no_mayor('casas_positivas', 'casas_inspeccionadas', 'encuesta_casas_pos_lte_insp'),
+            _no_mayor('recipientes_positivos', 'recipientes_inspeccionados', 'encuesta_recip_pos_lte_insp'),
+        ]
+
+    def __str__(self):
+        return f'{self.localidad} — {self.fecha:%d/%m/%Y} — {self.clase_trabajo}'
+
+
+class ConsolidadoMensual(models.Model):
+    """Fila del Consolidado mensual de Vigilancia y Control del Dengue.
+    Los campos opcionales en NULL significan 'no reportado' (distinto de 0)."""
+
+    localidad = models.CharField(max_length=50, verbose_name='Localidad')
+    anio = models.PositiveSmallIntegerField(verbose_name='Año')
+    mes = models.PositiveSmallIntegerField(verbose_name='Mes')
+    clase_trabajo = models.CharField(max_length=15, choices=Inspeccion.CLASE_TRABAJO,
+                                     verbose_name='Clase de trabajo')
+    personas_orientadas = models.PositiveIntegerField(null=True, blank=True)
+    viviendas_inspeccionadas = models.PositiveIntegerField()
+    viviendas_positivas = models.PositiveIntegerField(null=True, blank=True)
+    viviendas_abatizadas = models.PositiveIntegerField(null=True, blank=True)
+    viviendas_deschatarrizadas = models.PositiveIntegerField(null=True, blank=True)
+    viviendas_fumigadas = models.PositiveIntegerField(null=True, blank=True)
+    depositos_inspeccionados = models.PositiveIntegerField(null=True, blank=True)
+    depositos_positivos = models.PositiveIntegerField(null=True, blank=True)
+    depositos_tratados = models.PositiveIntegerField(null=True, blank=True)
+    muestras = models.PositiveIntegerField(null=True, blank=True)
+    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='Activo')
+    importado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='consolidados_importados', verbose_name='Importado por')
+    fecha_importacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Consolidado mensual (importado)'
+        verbose_name_plural = 'Consolidados mensuales (importados)'
+        ordering = ['-anio', '-mes', 'localidad', 'clase_trabajo']
+        constraints = [
+            models.UniqueConstraint(fields=['localidad', 'anio', 'mes', 'clase_trabajo'],
+                                    name='consolidado_unico_localidad_mes_clase'),
+            models.CheckConstraint(condition=models.Q(mes__gte=1, mes__lte=12),
+                                   name='consolidado_mes_valido'),
+            _no_mayor('viviendas_positivas', 'viviendas_inspeccionadas', 'consolidado_viv_pos_lte_insp'),
+            _no_mayor('depositos_positivos', 'depositos_inspeccionados', 'consolidado_dep_pos_lte_insp'),
+        ]
+
+    def __str__(self):
+        return f'{self.localidad} — {self.mes:02d}/{self.anio} — {self.clase_trabajo}'
