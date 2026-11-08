@@ -39,6 +39,10 @@ class Vivienda(models.Model):
         blank=True,
         verbose_name='Zona'
     )
+    # Fase 2: ubicación según el Formulario A-1 (columnas MZ y CASA).
+    # Opcionales: `direccion` se mantiene y los datos viejos no se migran.
+    manzana = models.CharField(max_length=20, blank=True, verbose_name='Manzana')
+    numero_casa = models.CharField(max_length=20, blank=True, verbose_name='Número de casa')
     referencia = models.CharField(
         max_length=255,
         blank=True,
@@ -68,6 +72,10 @@ class Vivienda(models.Model):
     )
     fecha_registro = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
+    # Marca los registros ficticios de `seed_piloto`. Los datos reales
+    # (vistas, importar_formatos) quedan siempre en False.
+    es_demo = models.BooleanField(default=False, editable=False,
+                                  verbose_name='Dato de demostración')
 
     class Meta:
         verbose_name = 'Vivienda'
@@ -156,6 +164,8 @@ class ViviendaHistorico(models.Model):
     responsable_familia = models.CharField(max_length=150)
     num_habitantes = models.PositiveIntegerField(default=0)
     zona = models.CharField(max_length=50, blank=True)
+    manzana = models.CharField(max_length=20, blank=True)
+    numero_casa = models.CharField(max_length=20, blank=True)
     estado = models.CharField(max_length=10)
     # Campos de auditoría
     fecha_cambio = models.DateTimeField(auto_now_add=True)

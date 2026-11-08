@@ -19,6 +19,8 @@ def _registrar_historial(vivienda, usuario, tipo_operacion):
         responsable_familia=vivienda.responsable_familia,
         num_habitantes=vivienda.num_habitantes,
         zona=vivienda.zona,
+        manzana=vivienda.manzana,
+        numero_casa=vivienda.numero_casa,
         estado=vivienda.estado,
         usuario_cambio=usuario,
         tipo_operacion=tipo_operacion,

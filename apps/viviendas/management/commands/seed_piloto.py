@@ -22,6 +22,7 @@ import random
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.usuarios.models import Rol, Usuario, UsuarioHistorico
@@ -120,8 +121,10 @@ class Command(BaseCommand):
         """Borra lo que sembró este comando en corridas anteriores."""
         usuarios_seed = Usuario.objects.filter(username__in=SEED_USERNAMES)
 
-        # Viviendas sembradas = las registradas por los usuarios-semilla.
-        viviendas_seed = Vivienda.objects.filter(registrado_por__in=usuarios_seed)
+        # Viviendas sembradas = marcadas es_demo, más las registradas por los
+        # usuarios-semilla (cubre siembras anteriores a que existiera es_demo).
+        viviendas_seed = Vivienda.objects.filter(
+            Q(es_demo=True) | Q(registrado_por__in=usuarios_seed))
 
         # Borrar los PNG de QR en disco para no dejar huérfanos en media/.
         for v in viviendas_seed:
@@ -290,6 +293,7 @@ class Command(BaseCommand):
                 referencia=rng.choice(REFERENCIAS),
                 telefono=f'5{rng.randint(100,999)}-{rng.randint(1000,9999)}',
                 registrado_por=registrador,
+                es_demo=True,
             )
             v.save()  # genera codigo_qr VSQR-XXXXXXXX y el PNG por el flujo normal
 
@@ -329,7 +333,8 @@ class Command(BaseCommand):
             tecnico = tecnicos[turno['i'] % 2]
             turno['i'] += 1
             flags = self._hallazgos(nivel, rng)
-            insp = Inspeccion(vivienda=vivienda, usuario=tecnico, **flags)
+            insp = Inspeccion(vivienda=vivienda, usuario=tecnico, es_demo=True,
+                              **flags)
             insp.save()  # el clasificador real fija nivel_riesgo
             fecha = self._fecha_laboral(dias_atras, rng)
             Inspeccion.objects.filter(pk=insp.pk).update(fecha_inspeccion=fecha)
@@ -431,6 +436,7 @@ class Command(BaseCommand):
             direccion=vivienda.direccion,
             responsable_familia=vivienda.responsable_familia,
             num_habitantes=vivienda.num_habitantes, zona=vivienda.zona,
+            manzana=vivienda.manzana, numero_casa=vivienda.numero_casa,
             estado=vivienda.estado, usuario_cambio=quien, tipo_operacion=tipo)
         ViviendaHistorico.objects.filter(pk=h.pk).update(fecha_cambio=fecha)
 
@@ -439,7 +445,8 @@ class Command(BaseCommand):
             inspeccion_original=insp, vivienda_codigo=insp.vivienda.codigo_qr,
             presencia_larvas=insp.presencia_larvas,
             criaderos_potenciales=insp.criaderos_potenciales,
-            nivel_riesgo=insp.nivel_riesgo, estado=insp.estado,
+            nivel_riesgo=insp.nivel_riesgo, clase_trabajo=insp.clase_trabajo,
+            estado=insp.estado,
             usuario_cambio=quien, tipo_operacion=tipo)
         InspeccionHistorico.objects.filter(pk=h.pk).update(fecha_cambio=fecha)
 

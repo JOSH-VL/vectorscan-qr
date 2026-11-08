@@ -19,6 +19,15 @@ class Inspeccion(models.Model):
         ('Medio', 'Medio'),
         ('Bajo', 'Bajo'),
     ]
+    # Fase 2: clase de trabajo según la hoja INF del consolidado MSPAS.
+    CLASE_TRABAJO = [
+        ('ENC', 'Encuesta'),
+        ('VERIF', 'Verificación'),
+        ('ACCION', 'Acción'),
+        ('PLAN', 'Plan'),
+        ('TRATAMIENTO', 'Tratamiento'),
+        ('FUM', 'Fumigación'),
+    ]
 
     vivienda = models.ForeignKey(
         Vivienda,
@@ -70,6 +79,16 @@ class Inspeccion(models.Model):
         choices=ESTADO_CHOICES,
         default='Activo'
     )
+    clase_trabajo = models.CharField(
+        max_length=15,
+        choices=CLASE_TRABAJO,
+        default='ENC',
+        verbose_name='Clase de trabajo'
+    )
+    # Marca los registros ficticios de `seed_piloto`. Los datos reales
+    # (vistas, importar_formatos) quedan siempre en False.
+    es_demo = models.BooleanField(default=False, editable=False,
+                                  verbose_name='Dato de demostración')
 
     class Meta:
         verbose_name = 'Inspección'
@@ -112,6 +131,27 @@ class Inspeccion(models.Model):
             medidas.append('Educación al residente')
         return medidas if medidas else ['Ninguna']
 
+    def depositos_cuadran(self):
+        """
+        Compara el desglose por tipo (DepositoInspeccion) contra los totales
+        num_depositos / depositos_positivos que usa el clasificador.
+        Solo avisa, no bloquea. Retorna (True, None) si no hay desglose o si
+        cuadra; (False, mensaje) si no cuadra.
+        """
+        if not self.pk:
+            return True, None
+        totales = self.depositos.aggregate(
+            insp=models.Sum('inspeccionados'), pos=models.Sum('positivos'))
+        if totales['insp'] is None:
+            return True, None  # sin desglose registrado
+        if totales['insp'] == self.num_depositos and totales['pos'] == self.depositos_positivos:
+            return True, None
+        return False, (
+            f"El desglose por tipo suma {totales['insp']} inspeccionados / "
+            f"{totales['pos']} positivos, pero la inspección registra "
+            f"{self.num_depositos} / {self.depositos_positivos}."
+        )
+
     @property
     def color_riesgo(self):
         """Color CSS para el badge de riesgo."""
@@ -123,6 +163,51 @@ class Inspeccion(models.Model):
         """Emoji para el nivel de riesgo."""
         emojis = {'Alto': '🔴', 'Medio': '🟡', 'Bajo': '🟢'}
         return emojis.get(self.nivel_riesgo, '⚪')
+
+
+class DepositoInspeccion(models.Model):
+    """
+    Desglose de depósitos por tipo, según el Formulario A-1 (hoja ENC1).
+    NO reemplaza num_depositos/depositos_positivos de Inspeccion (los usa el
+    clasificador); los desglosa. Ver Inspeccion.depositos_cuadran().
+    """
+
+    TIPOS = [
+        ('PILAS', 'Pilas'),
+        ('TONELES', 'Toneles'),
+        ('LLANTAS', 'Llantas'),
+        ('FLOREROS', 'Floreros'),
+        ('CUBETAS', 'Cubetas'),
+        ('ARBOL_PLANTAS', 'Árbol y plantas'),
+        ('POZOS', 'Pozos y similares'),
+        ('TANQUES', 'Tanques'),
+        ('OTROS', 'Otros'),
+    ]
+
+    inspeccion = models.ForeignKey(
+        Inspeccion,
+        on_delete=models.CASCADE,
+        related_name='depositos',
+        verbose_name='Inspección'
+    )
+    tipo = models.CharField(max_length=20, choices=TIPOS, verbose_name='Tipo de depósito')
+    inspeccionados = models.PositiveIntegerField(default=0, verbose_name='Inspeccionados')
+    positivos = models.PositiveIntegerField(default=0, verbose_name='Positivos')
+
+    class Meta:
+        verbose_name = 'Depósito de inspección'
+        verbose_name_plural = 'Depósitos de inspección'
+        ordering = ['inspeccion', 'tipo']
+        unique_together = [('inspeccion', 'tipo')]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(positivos__lte=models.F('inspeccionados')),
+                name='deposito_positivos_lte_inspeccionados',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()}: {self.positivos}/{self.inspeccionados}"
 
 
 class InspeccionHistorico(models.Model):
@@ -143,6 +228,7 @@ class InspeccionHistorico(models.Model):
     presencia_larvas = models.BooleanField(default=False)
     criaderos_potenciales = models.BooleanField(default=False)
     nivel_riesgo = models.CharField(max_length=10)
+    clase_trabajo = models.CharField(max_length=15, blank=True)
     estado = models.CharField(max_length=10)
     fecha_cambio = models.DateTimeField(auto_now_add=True)
     usuario_cambio = models.ForeignKey(

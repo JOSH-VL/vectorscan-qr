@@ -1,8 +1,15 @@
 from django.contrib import admin
-from .models import Inspeccion, InspeccionHistorico
+from .models import Inspeccion, InspeccionHistorico, DepositoInspeccion
+
+
+class DepositoInspeccionInline(admin.TabularInline):
+    model = DepositoInspeccion
+    extra = 0
+
 
 @admin.register(Inspeccion)
 class InspeccionAdmin(admin.ModelAdmin):
+    inlines = [DepositoInspeccionInline]
     list_display = ('vivienda', 'usuario', 'nivel_riesgo', 'presencia_larvas', 'fecha_inspeccion', 'estado')
     list_filter = ('nivel_riesgo', 'estado', 'presencia_larvas')
     search_fields = ('vivienda__codigo_qr', 'vivienda__direccion')

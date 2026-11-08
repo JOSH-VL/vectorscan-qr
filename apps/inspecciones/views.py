@@ -18,6 +18,7 @@ def _registrar_historial(inspeccion, usuario, tipo_operacion):
         presencia_larvas=inspeccion.presencia_larvas,
         criaderos_potenciales=inspeccion.criaderos_potenciales,
         nivel_riesgo=inspeccion.nivel_riesgo,
+        clase_trabajo=inspeccion.clase_trabajo,
         estado=inspeccion.estado,
         usuario_cambio=usuario,
         tipo_operacion=tipo_operacion,
