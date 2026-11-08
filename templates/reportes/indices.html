@@ -1,0 +1,138 @@
+{% extends 'base/layout.html' %}
+{% block title %}Índices Entomológicos — VectorScan QR{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h4 class="mb-0"><i class="bi bi-bug"></i> Índices Entomológicos por Zona</h4>
+    <a href="{% url 'reportes:panel' %}" class="btn btn-outline-primary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold">Mes</label>
+                <select name="mes" class="form-select" onchange="this.form.submit()">
+                    {% for m in meses %}
+                    <option value="{{ m|date:'Y-m' }}" {% if m == mes_sel %}selected{% endif %}>{{ m|date:'F Y'|capfirst }}</option>
+                    {% empty %}
+                    <option value="">Sin inspecciones registradas</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-8 small text-muted">
+                Indicadores <strong>agregados por zona</strong>. Son distintos del riesgo por vivienda
+                (Alto/Medio/Bajo), que se calcula en cada inspección.
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white">
+        <h6 class="mb-0">
+            <i class="bi bi-table"></i>
+            {% if mes_sel %}{{ mes_sel|date:'F Y'|capfirst }}{% else %}Sin datos{% endif %}
+        </h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-center">
+                <thead class="table-light">
+                    <tr>
+                        <th rowspan="2" class="text-start align-middle">Zona</th>
+                        <th colspan="2">Casas</th>
+                        <th colspan="2">Recipientes</th>
+                        <th rowspan="2" class="align-middle" title="Índice de Casas">I.C.</th>
+                        <th rowspan="2" class="align-middle" title="Índice de Breteau">I.B.</th>
+                        <th rowspan="2" class="align-middle" title="Índice de Recipientes">I.R.</th>
+                        <th rowspan="2" class="align-middle">Estrato</th>
+                    </tr>
+                    <tr>
+                        <th class="small">Insp.</th><th class="small">Pos.</th>
+                        <th class="small">Insp.</th><th class="small">Pos.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in filas %}
+                    <tr>
+                        <td class="text-start"><i class="bi bi-geo-alt text-primary"></i> {{ f.zona }}</td>
+                        <td>{{ f.casas_insp }}</td>
+                        <td>{{ f.casas_pos }}</td>
+                        <td>{{ f.recip_insp }}</td>
+                        <td>{{ f.recip_pos }}</td>
+                        <td class="fw-semibold">{% if f.ic is not None %}{{ f.ic }}{% else %}—{% endif %}</td>
+                        <td>{% if f.ib is not None %}{{ f.ib }}{% else %}—{% endif %}</td>
+                        <td>{% if f.ir is not None %}{{ f.ir }}{% else %}—{% endif %}</td>
+                        <td>
+                            {% if f.estrato %}
+                            <span class="badge bg-{{ f.color }}{% if f.color == 'warning' %} text-dark{% endif %} px-3">{{ f.estrato }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Sin inspecciones</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9" class="text-muted py-4">No hay zonas registradas.</td></tr>
+                    {% endfor %}
+                </tbody>
+                {% if filas %}
+                <tfoot class="table-light fw-semibold">
+                    <tr>
+                        <td class="text-start">{{ total.zona }}</td>
+                        <td>{{ total.casas_insp }}</td>
+                        <td>{{ total.casas_pos }}</td>
+                        <td>{{ total.recip_insp }}</td>
+                        <td>{{ total.recip_pos }}</td>
+                        <td>{% if total.ic is not None %}{{ total.ic }}{% else %}—{% endif %}</td>
+                        <td>{% if total.ib is not None %}{{ total.ib }}{% else %}—{% endif %}</td>
+                        <td>{% if total.ir is not None %}{{ total.ir }}{% else %}—{% endif %}</td>
+                        <td>
+                            {% if total.estrato %}
+                            <span class="badge bg-{{ total.color }}{% if total.color == 'warning' %} text-dark{% endif %} px-3">{{ total.estrato }}</span>
+                            {% else %}—{% endif %}
+                        </td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body small">
+                <h6><i class="bi bi-calculator"></i> Fórmulas</h6>
+                <ul class="mb-2">
+                    <li><strong>I.C.</strong> (Índice de Casas) = casas positivas ÷ casas inspeccionadas × 100</li>
+                    <li><strong>I.B.</strong> (Índice de Breteau) = recipientes positivos ÷ casas inspeccionadas × 100</li>
+                    <li><strong>I.R.</strong> (Índice de Recipientes) = recipientes positivos ÷ recipientes inspeccionados × 100</li>
+                </ul>
+                <p class="text-muted mb-0">Cada casa cuenta una vez por mes (su última inspección del mes).
+                    Casa positiva = con larvas o con al menos un recipiente positivo.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body small">
+                <h6><i class="bi bi-stoplight"></i> Estratificación por I.C.</h6>
+                <ul class="list-unstyled mb-2">
+                    {% for c in cortes %}
+                    <li class="mb-1">
+                        <span class="badge bg-{{ c.color }}{% if c.color == 'warning' %} text-dark{% endif %}" style="min-width:80px">{{ c.estrato }}</span>
+                        {% if c.hasta %}I.C. ≥ {{ c.desde }} y &lt; {{ c.hasta }}{% else %}I.C. ≥ {{ c.desde }}{% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% if not cortes_confirmados %}
+                <p class="text-muted fst-italic mb-0"><i class="bi bi-info-circle"></i>
+                    Cortes deducidos de la hoja de estratificación MSPAS 2026; pendientes de confirmación
+                    con el Centro de Salud.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

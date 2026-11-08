@@ -9,12 +9,14 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.db.models import Count, Q
+from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from apps.viviendas.models import Vivienda
 from apps.inspecciones.models import Inspeccion
 from apps.usuarios.models import Usuario
+from .indices import indices_por_zona, ESTRATOS_INDICE_CASAS, CORTES_CONFIRMADOS
 
 
 def _get_filtros(request):
@@ -122,6 +124,60 @@ def reporte_riesgo(request):
         })
 
     return render(request, 'reportes/riesgo.html', {'data_zonas': data_zonas})
+
+
+@login_required
+def reporte_indices(request):
+    """
+    Índices entomológicos (I.C., I.B., I.R.) por zona para un mes.
+    Agregado por ZONA; no usa ni modifica el riesgo por vivienda.
+    """
+    activas = Inspeccion.objects.filter(estado='Activo')
+    meses = [
+        m.date() if hasattr(m, 'date') else m
+        for m in activas.annotate(m=TruncMonth('fecha_inspeccion'))
+        .values_list('m', flat=True).distinct().order_by('-m')
+    ]
+
+    # Mes elegido (YYYY-MM); por defecto el más reciente con inspecciones.
+    mes_sel = None
+    mes_param = request.GET.get('mes', '')
+    if mes_param:
+        try:
+            mes_sel = datetime.strptime(mes_param, '%Y-%m').date()
+        except ValueError:
+            mes_sel = None
+    if mes_sel is None and meses:
+        mes_sel = meses[0]
+
+    zonas = list(
+        Vivienda.objects.filter(estado='Activo').exclude(zona='')
+        .values_list('zona', flat=True).distinct().order_by('zona')
+    )
+    inspecciones = []
+    if mes_sel:
+        inspecciones = (
+            activas.filter(fecha_inspeccion__year=mes_sel.year,
+                           fecha_inspeccion__month=mes_sel.month,
+                           vivienda__estado='Activo')
+            .select_related('vivienda').order_by('-fecha_inspeccion')
+        )
+    filas, total = indices_por_zona(inspecciones, zonas)
+
+    cortes = [
+        {'estrato': e, 'color': c, 'desde': lim,
+         'hasta': ESTRATOS_INDICE_CASAS[i - 1][0] if i > 0 else None}
+        for i, (lim, e, c) in enumerate(ESTRATOS_INDICE_CASAS)
+    ]
+
+    return render(request, 'reportes/indices.html', {
+        'filas': filas,
+        'total': total,
+        'meses': meses,
+        'mes_sel': mes_sel,
+        'cortes': cortes,
+        'cortes_confirmados': CORTES_CONFIRMADOS,
+    })
 
 
 @login_required

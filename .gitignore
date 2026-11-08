@@ -12,3 +12,10 @@ media/
 staticfiles/
 .DS_Store
 Thumbs.db
+
+# Metadatos que Windows agrega al copiar archivos descargados
+*:Zone.Identifier
+
+# Excel con datos reales del Centro de Salud: nunca se versionan
+*.xls
+*.xlsx
